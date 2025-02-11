@@ -10,8 +10,8 @@ from sentence_transformers import SentenceTransformer, util
 
 # Parse aguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=str, help='Path to the dataset', default="/Brain/private/bpasdelo/datasets/metal/data")
-parser.add_argument('--output_directory', type=str, help='Path to the output directory', default="/Brain/private/bpasdelo/datasets/metal/output")
+parser.add_argument('--dataset', type=str, help='Path to the dataset', default="/Brain/public/datasets/metal/data")
+parser.add_argument('--output_directory', type=str, help='Path to the output directory', default="/Brain/public/datasets/metal/output")
 parser.add_argument('--pipeline_arguments', type=dict, help='Extra arguments for the pipeline', default={"language": "english"})
 parser.add_argument('--models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2"])
 parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=False)
@@ -23,7 +23,7 @@ all_file_names = [os.path.join(source, file[:file.rfind('.')]) for source in os.
 # To set manually to a portion of the dataset
 #all_file_names = ["songs/bloodbath___like_fire"]
 
-# Function to get full path to audio file
+# Functions to get full path to audio/lyrics file
 def get_audio(file_name_no_extension):
     for file in os.listdir(os.path.join(args.dataset, "audio", *file_name_no_extension.split(os.path.sep)[:-1])):
         if file.startswith(file_name_no_extension.split(os.path.sep)[-1]):
