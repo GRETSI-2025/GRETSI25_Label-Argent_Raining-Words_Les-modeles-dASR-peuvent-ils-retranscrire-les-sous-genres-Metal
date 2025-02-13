@@ -20,15 +20,11 @@ Dataset should be formatted as follows:
             - file_name_3.{wav, flac...}
             - file_name_4.{wav, flac...}
         - ...
-    - lyrics
-        - source_1
-            - file_name_1.txt
-            - file_name_2.txt
-        - source_2
-            - file_name_3.txt
-            - file_name_4.txt
-        - ...
+    - lyrics.odt
 ```
 
-Make sure that source directories (*e.g.*, "emvd", "demucs", "songs) and file names (*e.g.*, `bloodbath___like_fire.{...}`) are consistent between audio and lyrics directories.
-Files can be in any format, as long as the ASR model can handle it.
+Audio files can be in any format, as long as the ASR model can handle it.
+They should be grouped by source to keep datasets together (*e.g.*, EMVD, songs).
+
+File `lyrics.ods` should have one tab per source and one line per song.
+You can provide multiple transcripts of the same lyrics (*e.g.*, various listener perceptions, declared lyrics).
