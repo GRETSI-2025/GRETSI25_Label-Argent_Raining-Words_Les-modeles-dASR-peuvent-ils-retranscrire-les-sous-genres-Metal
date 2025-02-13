@@ -16,8 +16,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, help='Path to the dataset', default="/Brain/public/datasets/metal/data")
 parser.add_argument('--output_directory', type=str, help='Path to the output directory', default="/Brain/public/datasets/metal/output")
 parser.add_argument('--pipeline_arguments', type=dict, help='Extra arguments for the pipeline', default={"language": "english"})
-parser.add_argument('--models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2"])
-parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=True)
+parser.add_argument('--asr_models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2", "facebook/wav2vec2-base-960h", "openai/whisper-large-v3"])
+parser.add_argument('--st_models', type=list, help='List of models to evaluate', default=["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"])
+parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=False)
 args = parser.parse_args()
 
 #####################################################################################################################################################
@@ -107,7 +108,6 @@ def get_lyrics (lyrics_file, source, file_name_no_extension):
 
 # Get the list of all file names to work on
 all_file_names = list_from_source()
-print(f"Found files in sources: {all_file_names}")
 
 ###################################
 ########## EXTRACT LYRICS #########
@@ -117,10 +117,10 @@ print(f"Found files in sources: {all_file_names}")
 if args.extract_lyrics:
 
     # Extract lyrics from all audio files using the models
-    for model in args.models:
+    for asr_model in args.asr_models:
 
         # Remove previous results if any
-        model_path = os.path.join(args.output_directory, model.replace(os.path.sep, "-") + ".ods")
+        model_path = os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods")
         if os.path.exists(model_path):
             os.remove(model_path)
 
@@ -129,7 +129,7 @@ if args.extract_lyrics:
             
             # Model pipeline for ASR
             data = {"File": [], "Lyrics": []}
-            pipe = pipeline(model=model, torch_dtype="auto", return_timestamps=True)
+            pipe = pipeline(model=asr_model, torch_dtype="auto", return_timestamps=True)
             for file_name in all_file_names[source]:
                 out = pipe(get_audio(source, file_name), generate_kwargs=args.pipeline_arguments)
                 data["File"].append(file_name)
@@ -146,27 +146,40 @@ if args.extract_lyrics:
 ###### COMPUTE SIMILARITIES #######
 ###################################
 
-# Load model for sentence embeddings
-sentence_transformer = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+# Load models for sentence embeddings
+sentence_transformers = {}
+for st_model in args.st_models:
+    sentence_transformers[st_model] = SentenceTransformer(st_model)
 
-# Compute similarity between found and ground truth lyrics
-for source in all_file_names:
-    for model in args.models:
-        for file_name in all_file_names[source]:
+# First group by source
+for source in sorted(all_file_names):
+    print(f"{source}")
 
-            # Load lyrics
-            actual_lyrics = get_lyrics(os.path.join(args.dataset, "lyrics.ods"), source, file_name)
-            found_lyrics = get_lyrics(os.path.join(args.output_directory, model.replace(os.path.sep, "-") + ".ods"), source, file_name)["Lyrics"]
+    # Then by file
+    for file_name in sorted(all_file_names[source]):
+        print(f"|__ {file_name}")
 
-            # Compute embeddings
-            embedding_found = sentence_transformer.encode(found_lyrics, convert_to_tensor=True)
-            similarities = []
-            for key in actual_lyrics:
-                embedding_actual = sentence_transformer.encode(actual_lyrics[key], convert_to_tensor=True)
+        # Then by ASR model and ST model
+        for asr_model in args.asr_models:
+            for st_model in args.st_models:
+                print(f"|   |__ ASR: {asr_model} / ST: {st_model}")
 
-                # Compute similarity
-                similarity = util.pytorch_cos_sim(embedding_found, embedding_actual).item()
-                similarities.append(similarity)
-                
-            # Report results
-            print(f"{model} \t\t {source} \t\t {file_name} \t\t {similarities} (mean {numpy.mean(similarities)}, std {numpy.std(similarities)})")
+                # Load lyrics
+                actual_lyrics = get_lyrics(os.path.join(args.dataset, "lyrics.ods"), source, file_name)
+                found_lyrics = get_lyrics(os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods"), source, file_name)["Lyrics"]
+
+                # Compute embeddings
+                embedding_found = sentence_transformers[st_model].encode(found_lyrics, convert_to_tensor=True)
+                similarities = []
+                for key in actual_lyrics:
+                    embedding_actual = sentence_transformers[st_model].encode(actual_lyrics[key], convert_to_tensor=True)
+
+                    # Compute similarity
+                    similarity = util.pytorch_cos_sim(embedding_found, embedding_actual).item()
+                    similarities.append(similarity)
+                    
+                # Report results
+                #for i, key in enumerate(actual_lyrics):
+                #    print(f"|   |   |__ Similarity to {key}: {similarities[i]}")
+                #print(f"|   |   |__ Average similarity: {numpy.mean(similarities)}")
+                print(f"|   |   |__ Max similarity: {numpy.max(similarities)}")
