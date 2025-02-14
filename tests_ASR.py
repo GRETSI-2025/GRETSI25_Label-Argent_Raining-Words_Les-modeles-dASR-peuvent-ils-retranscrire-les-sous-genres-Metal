@@ -4,25 +4,70 @@
 
 # Imports
 import os
-import numpy
+import sys
 import argparse
 from pathlib import Path
 from transformers import pipeline
-from sentence_transformers import SentenceTransformer, util
+from huggingface_hub import snapshot_download
 import pandas
+from evaluate import load
 
-# Parse aguments
+# Prepare parser
 parser = argparse.ArgumentParser()
+
+# Path arguments
 parser.add_argument('--dataset', type=str, help='Path to the dataset', default="/Brain/public/datasets/metal/data")
 parser.add_argument('--output_directory', type=str, help='Path to the output directory', default="/Brain/public/datasets/metal/output")
-parser.add_argument('--pipeline_arguments', type=dict, help='Extra arguments for the pipeline', default={"language": "english"})
-parser.add_argument('--asr_models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2", "facebook/wav2vec2-base-960h", "openai/whisper-large-v3"])
-parser.add_argument('--st_models', type=list, help='List of models to evaluate', default=["sentence-transformers/all-MiniLM-L6-v2", "sentence-transformers/all-mpnet-base-v2"])
-parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=False)
+parser.add_argument('--models_directory', type=str, help='Path to where models are downloaded', default="/Brain/public/models")
+
+# Models to use
+parser.add_argument('--asr_models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2",
+                                                                                           "openai/whisper-large-v3"])
+parser.add_argument('--similarity_metrics', type=list, help='Metrics or models used for computing similarity', default=["WER",
+                                                                                                                        "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+                                                                                                                        "sentence-transformers/all-MiniLM-L6-v2",
+                                                                                                                        "sentence-transformers/all-mpnet-base-v2"])
+
+# Control parts of the script to run or not
+parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=True)
+
+# Go
 args = parser.parse_args()
 
 #####################################################################################################################################################
 ################################################################## USEFUL FUNCTIONS #################################################################
+#####################################################################################################################################################
+
+def get_pipeline (task, model_name):
+
+    """
+        Load a model pipeline from the Hugging Face Hub.
+        The model is downloaded if not already present in the models directory.
+        The pipeline is stored in global memory to avoid reloading if calling the function multiple times.
+        :param model_name: The name of the model to load.
+        :param task: The task of the pipeline.
+        :return: The pipeline for the given task with the given model.
+    """
+
+    # Check if the pipeline is already in global memory to avoid reloading
+    if "loaded_models" not in globals():
+        globals()["loaded_models"] = {}
+    global_model_key = task + "_" + model_name
+    if global_model_key in globals()["loaded_models"]:
+        return globals()["loaded_models"][global_model_key]
+
+    # Download the model if not already downloaded
+    model_path = os.path.join(args.models_directory, model_name)
+    if not os.path.exists(model_path):
+        print(f"Downloading model {model_name} to {model_path}", file=sys.stderr, flush=True)
+        snapshot_download(repo_id=model_name, local_dir=model_path)
+        os.system(f"chmod 777 -R {model_path}")
+
+    # Load the pipeline
+    print(f"Loading pipeline with model {model_name} for {task}", file=sys.stderr, flush=True)
+    globals()["loaded_models"][global_model_key] = pipeline(task, model=model_path)
+    return globals()["loaded_models"][global_model_key]
+
 #####################################################################################################################################################
 
 def list_from_source (source=None):
@@ -97,6 +142,39 @@ def get_lyrics (lyrics_file, source, file_name_no_extension):
 
     # Raise exception if the lyrics are not found
     raise Exception(f"Lyrics not found for {file_name_no_extension}")
+ 
+#####################################################################################################################################################
+
+def compute_similarities (predicted_lyrics, actual_lyrics):
+
+    """
+        Compute various similarities between two sets of lyrics.
+        :param predicted_lyrics: The predicted lyrics.
+        :param actual_lyrics: The reference lyrics.
+        :return: The similarities between the two sets of lyrics.
+    """
+
+    # Function to compute similarity with Sentence Transformers
+    def _compute_similarity_with_sentence_transformer (st_model):
+        pipe = get_pipeline("feature-extraction", st_model)
+        embedding_actual = pipe(actual_lyrics, return_tensors=True)[0].mean(dim=0)
+        embedding_predicted = pipe(predicted_lyrics, return_tensors=True)[0].mean(dim=0)
+        return float(embedding_actual @ embedding_predicted / (embedding_actual.norm() * embedding_predicted.norm()))
+    
+    # Function to compute similarity with Word Error Rate
+    def _compute_similarity_with_word_error_rate ():
+        wer = load("wer")
+        error = wer.compute(predictions=[actual_lyrics], references=[predicted_lyrics])
+        return 1 - error
+    
+    # Return a dictionary of similarities
+    similarities = {}
+    for metric in args.similarity_metrics:
+        if "/" in metric:
+            similarities[metric] = _compute_similarity_with_sentence_transformer(metric)
+        elif metric == "WER":
+            similarities["WER"] = _compute_similarity_with_word_error_rate()
+    return similarities
 
 #####################################################################################################################################################
 ####################################################################### SCRIPT ######################################################################
@@ -108,6 +186,7 @@ def get_lyrics (lyrics_file, source, file_name_no_extension):
 
 # Get the list of all file names to work on
 all_file_names = list_from_source()
+print(f"Loaded files {all_file_names}", file=sys.stderr, flush=True)
 
 ###################################
 ########## EXTRACT LYRICS #########
@@ -120,25 +199,27 @@ if args.extract_lyrics:
     for asr_model in args.asr_models:
 
         # Remove previous results if any
-        model_path = os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods")
-        if os.path.exists(model_path):
-            os.remove(model_path)
+        results_path = os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods")
+        if os.path.exists(results_path):
+            os.remove(results_path)
+
+        # Load ASR pipeline
+        pipe = get_pipeline("automatic-speech-recognition", asr_model)
 
         # One sheet per source
         for source in all_file_names:
             
             # Model pipeline for ASR
             data = {"File": [], "Lyrics": []}
-            pipe = pipeline(model=asr_model, torch_dtype="auto", return_timestamps=True)
             for file_name in all_file_names[source]:
-                out = pipe(get_audio(source, file_name), generate_kwargs=args.pipeline_arguments)
+                out = pipe(get_audio(source, file_name), return_timestamps=True, generate_kwargs={"language": "english"})
                 data["File"].append(file_name)
                 data["Lyrics"].append(out["text"])
 
             # Save results to file
-            file = pandas.read_excel(model_path, engine="odf", sheet_name=None) if os.path.exists(model_path) else {}
+            file = pandas.read_excel(results_path, engine="odf", sheet_name=None) if os.path.exists(results_path) else {}
             file[source.replace(os.path.sep, "___")] = pandas.DataFrame(data)
-            with pandas.ExcelWriter(model_path, engine="odf") as writer:
+            with pandas.ExcelWriter(results_path, engine="odf") as writer:
                 for sheet_name, sheet in file.items():
                     sheet.to_excel(writer, sheet_name=sheet_name, index=False)
 
@@ -146,40 +227,32 @@ if args.extract_lyrics:
 ###### COMPUTE SIMILARITIES #######
 ###################################
 
-# Load models for sentence embeddings
-sentence_transformers = {}
-for st_model in args.st_models:
-    sentence_transformers[st_model] = SentenceTransformer(st_model)
+# Write results to output file
+output_file_name = os.path.join(args.output_directory, "similarities.txt")
+with open(output_file_name, "w") as output_file:
 
-# First group by source
-for source in sorted(all_file_names):
-    print(f"{source}")
+    # First group by source
+    for source in sorted(all_file_names):
+        print(f"[SOURCE] {source}", file=output_file, flush=True)
 
-    # Then by file
-    for file_name in sorted(all_file_names[source]):
-        print(f"|__ {file_name}")
+        # Then by file
+        for file_name in sorted(all_file_names[source]):
+            print(f"|__ [FILE] {file_name}", file=output_file, flush=True)
 
-        # Then by ASR model and ST model
-        for asr_model in args.asr_models:
-            for st_model in args.st_models:
-                print(f"|   |__ ASR: {asr_model} / ST: {st_model}")
+            # Then by ASR model
+            for asr_model in args.asr_models:
+                print(f"|   |__ [MODEL] {asr_model}", file=output_file, flush=True)
 
                 # Load lyrics
                 actual_lyrics = get_lyrics(os.path.join(args.dataset, "lyrics.ods"), source, file_name)
                 found_lyrics = get_lyrics(os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods"), source, file_name)["Lyrics"]
 
-                # Compute embeddings
-                embedding_found = sentence_transformers[st_model].encode(found_lyrics, convert_to_tensor=True)
-                similarities = []
+                # Compute similarities
+                similarities = {}
                 for key in actual_lyrics:
-                    embedding_actual = sentence_transformers[st_model].encode(actual_lyrics[key], convert_to_tensor=True)
-
-                    # Compute similarity
-                    similarity = util.pytorch_cos_sim(embedding_found, embedding_actual).item()
-                    similarities.append(similarity)
+                    similarities[key] = compute_similarities(actual_lyrics[key], found_lyrics)
                     
                 # Report results
-                #for i, key in enumerate(actual_lyrics):
-                #    print(f"|   |   |__ Similarity to {key}: {similarities[i]}")
-                #print(f"|   |   |__ Average similarity: {numpy.mean(similarities)}")
-                print(f"|   |   |__ Max similarity: {numpy.max(similarities)}")
+                for sim_metric in list(similarities.values())[0]:
+                    all_sim_measures = [similarities[key][sim_metric] for key in similarities]
+                    print(f"|   |   |__ [METRIC] {sim_metric} -- max({all_sim_measures}) = {max(all_sim_measures)}", file=output_file, flush=True)
