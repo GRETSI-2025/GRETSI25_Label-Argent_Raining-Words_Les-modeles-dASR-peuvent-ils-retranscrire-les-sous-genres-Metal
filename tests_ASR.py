@@ -11,6 +11,9 @@ from transformers import pipeline
 from huggingface_hub import snapshot_download
 import pandas
 from evaluate import load
+import pickle
+import numpy
+import matplotlib.pyplot as pyplot
 
 # Prepare parser
 parser = argparse.ArgumentParser()
@@ -23,13 +26,14 @@ parser.add_argument('--models_directory', type=str, help='Path to where models a
 # Models to use
 parser.add_argument('--asr_models', type=list, help='List of models to evaluate', default=["openai/whisper-large-v2",
                                                                                            "openai/whisper-large-v3"])
-parser.add_argument('--similarity_metrics', type=list, help='Metrics or models used for computing similarity', default=["WER",
-                                                                                                                        "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-                                                                                                                        "sentence-transformers/all-MiniLM-L6-v2",
-                                                                                                                        "sentence-transformers/all-mpnet-base-v2"])
+parser.add_argument('--metrics', type=list, help='Metrics or models used for computing similarity/error', default=["WER",
+                                                                                                                   "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
+                                                                                                                   "sentence-transformers/all-MiniLM-L6-v2",
+                                                                                                                   "sentence-transformers/all-mpnet-base-v2"])
 
 # Control parts of the script to run or not
-parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=True)
+parser.add_argument('--extract_lyrics', type=bool, help='Extract lyrics or use precomputed ones', default=False)
+parser.add_argument('--compute_metrics', type=bool, help='Compute metrics or use precomputed ones', default=False)
 
 # Go
 args = parser.parse_args()
@@ -145,36 +149,55 @@ def get_lyrics (lyrics_file, source, file_name_no_extension):
  
 #####################################################################################################################################################
 
-def compute_similarities (predicted_lyrics, actual_lyrics):
+def compute_metrics (predicted_lyrics, actual_lyrics):
 
     """
-        Compute various similarities between two sets of lyrics.
+        Compute various metrics between two sets of lyrics.
         :param predicted_lyrics: The predicted lyrics.
         :param actual_lyrics: The reference lyrics.
-        :return: The similarities between the two sets of lyrics.
+        :return: The similarities/errors between the two sets of lyrics.
     """
 
-    # Function to compute similarity with Sentence Transformers
-    def _compute_similarity_with_sentence_transformer (st_model):
+    # Function to compute similarity in an embedding
+    def _embedding_similarity (st_model):
         pipe = get_pipeline("feature-extraction", st_model)
         embedding_actual = pipe(actual_lyrics, return_tensors=True)[0].mean(dim=0)
         embedding_predicted = pipe(predicted_lyrics, return_tensors=True)[0].mean(dim=0)
         return float(embedding_actual @ embedding_predicted / (embedding_actual.norm() * embedding_predicted.norm()))
     
-    # Function to compute similarity with Word Error Rate
-    def _compute_similarity_with_word_error_rate ():
+    # Function to compute error with Word Error Rate
+    def _word_error_rate ():
         wer = load("wer")
         error = wer.compute(predictions=[actual_lyrics], references=[predicted_lyrics])
-        return 1 - error
-    
-    # Return a dictionary of similarities
-    similarities = {}
-    for metric in args.similarity_metrics:
+        return error
+
+    # Return a dictionary of metrics
+    metrics = {}
+    for metric in args.metrics:
         if "/" in metric:
-            similarities[metric] = _compute_similarity_with_sentence_transformer(metric)
+            metrics[metric] = _embedding_similarity(metric)
         elif metric == "WER":
-            similarities["WER"] = _compute_similarity_with_word_error_rate()
-    return similarities
+            metrics["WER"] = _word_error_rate()
+    return metrics
+
+#####################################################################################################################################################
+
+def print_title (title, size=100, character="#"):
+
+    """
+        Print a title with a given message.
+        :param title: The message to print.
+        :param size: The size of the separator.
+        :param character: The character to use for the separator.
+    """
+
+    # Print centered title
+    print("", flush=True)
+    print("", flush=True)
+    print("#" * size, flush=True)
+    print("#" + " " * ((size - len(title) - 2) // 2) + title + " " * ((size - len(title) - 2) // 2) + "#", flush=True)
+    print("#" * size, flush=True)
+    print("", flush=True)
 
 #####################################################################################################################################################
 ####################################################################### SCRIPT ######################################################################
@@ -192,7 +215,10 @@ print(f"Loaded files {all_file_names}", file=sys.stderr, flush=True)
 ########## EXTRACT LYRICS #########
 ###################################
 
-# We may run the section or load precomputed results
+# Title
+print_title("EXTRACT LYRICS")
+
+# We either extract the lyrics
 if args.extract_lyrics:
 
     # Extract lyrics from all audio files using the models
@@ -223,36 +249,111 @@ if args.extract_lyrics:
                 for sheet_name, sheet in file.items():
                     sheet.to_excel(writer, sheet_name=sheet_name, index=False)
 
+# Or will use precomputed results
+else:
+    print(f"Using precomputed lyrics", flush=True)
+
 ###################################
-###### COMPUTE SIMILARITIES #######
+######### COMPUTE METRICS #########
 ###################################
 
-# Write results to output file
-output_file_name = os.path.join(args.output_directory, "similarities.txt")
-with open(output_file_name, "w") as output_file:
+# Title
+print_title("COMPUTE METRICS")
+
+# We either compute the metrics
+metrics_file_name = os.path.join(args.output_directory, "metrics.pt")
+all_metrics = {}
+if args.compute_metrics:
 
     # First group by source
     for source in sorted(all_file_names):
-        print(f"[SOURCE] {source}", file=output_file, flush=True)
+        all_metrics[source] = {}
+        print(f"[SOURCE] {source}", flush=True)
 
         # Then by file
         for file_name in sorted(all_file_names[source]):
-            print(f"|__ [FILE] {file_name}", file=output_file, flush=True)
+            all_metrics[source][file_name] = {}
+            print(f"|__ [FILE] {file_name}", flush=True)
 
             # Then by ASR model
             for asr_model in args.asr_models:
-                print(f"|   |__ [MODEL] {asr_model}", file=output_file, flush=True)
+                all_metrics[source][file_name][asr_model] = {}
+                print(f"|   |__ [MODEL] {asr_model}", flush=True)
 
                 # Load lyrics
                 actual_lyrics = get_lyrics(os.path.join(args.dataset, "lyrics.ods"), source, file_name)
                 found_lyrics = get_lyrics(os.path.join(args.output_directory, asr_model.replace(os.path.sep, "-") + ".ods"), source, file_name)["Lyrics"]
 
-                # Compute similarities
-                similarities = {}
+                # Compute metrics
                 for key in actual_lyrics:
-                    similarities[key] = compute_similarities(actual_lyrics[key], found_lyrics)
-                    
+                    all_metrics[source][file_name][asr_model][key] = compute_metrics(actual_lyrics[key], found_lyrics)
+
                 # Report results
-                for sim_metric in list(similarities.values())[0]:
-                    all_sim_measures = [similarities[key][sim_metric] for key in similarities]
-                    print(f"|   |   |__ [METRIC] {sim_metric} -- max({all_sim_measures}) = {max(all_sim_measures)}", file=output_file, flush=True)
+                all_metrics_names = list(all_metrics[source][file_name][asr_model].values())[0]
+                for metric in all_metrics_names:
+                    best = min if metric == "WER" else max
+                    all_values = [all_metrics[source][file_name][asr_model][key][metric] for key in all_metrics[source][file_name][asr_model]]
+                    print(f"|   |   |__ [METRIC] {metric} -- {best.__name__}({all_values}) = {best(all_values)}", flush=True)
+
+    # Save results to file
+    with open(metrics_file_name, "wb") as file:
+        pickle.dump(all_metrics, file)
+
+# Or will use precomputed results
+else:
+    print(f"Loading precomputed metrics", flush=True)
+    with open(metrics_file_name, "rb") as file:
+        all_metrics = pickle.load(file)
+
+###################################
+######### ANALYZE METRICS #########
+###################################
+
+# Title
+print_title("ANALYZE METRICS")
+
+# Check recognition per style on EMVD
+if "emvd" in all_metrics:
+
+    # Group by style, model and metric (best value)
+    all_styles = list(set(file_name.split("_")[1] for file_name in all_metrics["emvd"]))
+    all_models = list(list(all_metrics["emvd"].values())[0].keys())
+    all_metrics_names = list(list(list(all_metrics["emvd"].values())[0][all_models[0]].values())[0].keys())
+    grouped_metrics = {style: {model: {metric: [] for metric in all_metrics_names} for model in all_models} for style in all_styles}
+    for file_name in all_metrics["emvd"]:
+        style = file_name.split("_")[1]
+        for model in all_models:
+            for metric in all_metrics_names:
+                best = min if metric == "WER" else max
+                grouped_metrics[style][model][metric].append(best([all_metrics["emvd"][file_name][model][key][metric] for key in all_metrics["emvd"][file_name][model]]))
+
+    # Show average results per style
+    for style in grouped_metrics:
+        print(f"[STYLE] {style}")
+        for model in grouped_metrics[style]:
+            print(f"|__ [MODEL] {model}")
+            for metric in grouped_metrics[style][model]:
+                mean_metric = numpy.mean(grouped_metrics[style][model][metric])
+                std_metric = numpy.std(grouped_metrics[style][model][metric])
+                print(f"|   |__ [METRIC] {metric} -- mean = {mean_metric} -- std = {std_metric}")
+
+    # Plot results (one subplot per metric pair)
+    colors = ["blue", "red", "green", "orange", "purple", "brown", "pink", "gray", "cyan", "magenta"]
+    symbols = ["o", "s", "D", "v", "^", "<", ">", "p", "h", "H"]
+    fig, axs = pyplot.subplots(len(all_metrics_names)-1, len(all_metrics_names)-1, figsize=(len(all_metrics_names) * 5, len(all_metrics_names) * 5))
+    for i_metric_1, metric_1 in enumerate(all_metrics_names):
+        for i_metric_2, metric_2 in enumerate(all_metrics_names):
+            if i_metric_1 < i_metric_2:
+                for i_style, style in enumerate(grouped_metrics):
+                    for i_model, model in enumerate(grouped_metrics[style]):
+                        axs[i_metric_1, i_metric_2 - 1].scatter(numpy.mean(grouped_metrics[style][model][metric_1]), numpy.mean(grouped_metrics[style][model][metric_2]), label=style + " / " + model, color=colors[i_style], marker=symbols[i_model])
+                axs[i_metric_1, i_metric_2 - 1].set_xlabel(metric_1)
+                axs[i_metric_1, i_metric_2 - 1].set_ylabel(metric_2)
+            if i_metric_1 == 0 and i_metric_2 == 1:
+                fig.legend(loc="lower left", bbox_to_anchor=(0.1, 0.1))
+            if 0 < i_metric_1 < len(all_metrics_names)-1 and i_metric_2 < i_metric_1:
+                axs[i_metric_1, i_metric_2].axis("off")
+    fig.tight_layout()
+    fig.savefig(os.path.join(args.output_directory, "emvd_metrics_per_style.png"))
+
+#####################################################################################################################################################

@@ -11,7 +11,7 @@ This script is used to evaluate the performance of ASR models on a dataset of me
 
 Dataset should be formatted as follows:
 ```
-- dataset
+- data
     - audio
         - source_1
             - file_name_1.{wav, flac...}
