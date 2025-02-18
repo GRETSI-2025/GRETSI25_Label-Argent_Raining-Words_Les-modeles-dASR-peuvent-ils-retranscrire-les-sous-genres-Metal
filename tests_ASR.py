@@ -134,14 +134,23 @@ def normalize_lyrics (lyrics):
 
 #####################################################################################################################################################
 
-def get_lyrics (lyrics_file, source, file_name_no_extension):
+def get_lyrics (lyrics_file, source, file_name_no_extension, memoize=True):
 
     """
         Return the lyrics of a song given its file name.
         :param lyrics_file: The file containing the lyrics.
         :param file_name_no_extension: The file name of the song without extension.
+        :param memoize: Whether to store the lyrics in global memory to avoid reloading if calling the function multiple times.
         :return: A dictionary of lyrics, with each value is a retranscription of the lyrics with column name as key.
     """
+
+    # Check if the lyrics are already in global memory to avoid reloading
+    if memoize:
+        if "loaded_lyrics" not in globals():
+            globals()["loaded_lyrics"] = {}
+        global_lyrics_key = f"{lyrics_file}_{source}_{file_name_no_extension}"
+        if global_lyrics_key in globals()["loaded_lyrics"]:
+            return globals()["loaded_lyrics"][global_lyrics_key]
 
     # Lyrics are stored in .odt files
     sheet = pandas.read_excel(lyrics_file, engine="odf", sheet_name=source.replace(os.path.sep, "___"))
@@ -150,9 +159,15 @@ def get_lyrics (lyrics_file, source, file_name_no_extension):
     lyrics = {}
     for i, row in sheet.iterrows():
         if row["File"] == file_name_no_extension:
+
+            # Extract all candidate lyrics
             for column in sheet.columns:
                 if column.startswith("Lyrics"):
                     lyrics[column] = normalize_lyrics(str(row[column]))
+            
+            # Memoize if needed
+            if memoize:
+                globals()["loaded_lyrics"][global_lyrics_key] = lyrics
             return lyrics
 
     # Raise exception if the lyrics are not found
@@ -206,7 +221,7 @@ def print_title (title, size=100, character="#"):
     print("", flush=True)
     print("", flush=True)
     print("#" * size, flush=True)
-    print("#" + " " * ((size - len(title) - 2) // 2) + title + " " * ((size - len(title) - 2) // 2) + "#", flush=True)
+    print("#" + " " * ((size - len(title) - 1) // 2) + title + " " * ((size - len(title) - 2) // 2) + "#", flush=True)
     print("#" * size, flush=True)
     print("", flush=True)
 
