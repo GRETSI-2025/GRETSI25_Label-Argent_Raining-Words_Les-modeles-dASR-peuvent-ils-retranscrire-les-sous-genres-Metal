@@ -72,7 +72,7 @@ def get_pipeline (task, model_name, memoize=True, **kwargs):
         print(f"Downloading model {model_name} to {model_path}", file=sys.stderr, flush=True)
         huggingface_hub.login(token=open(args.hf_key, "r").read().strip())
         huggingface_hub.snapshot_download(repo_id=model_name, local_dir=model_path)
-        os.system(f"chmod 777 -R {model_path}")
+        os.chmod(f"/Brain/public/models/{model_path}", 0o777)
 
     # Load the pipeline
     print(f"Loading pipeline with model {model_name} for {task}", file=sys.stderr, flush=True)
