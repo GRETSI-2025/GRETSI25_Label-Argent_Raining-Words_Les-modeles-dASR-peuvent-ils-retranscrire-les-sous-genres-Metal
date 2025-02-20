@@ -25,7 +25,7 @@ def get_metric (metric_class_name, memoize=True):
             return globals()["loaded_metrics"][metric_class_name]
 
     # Metric can be passed as a tuple with arguments
-    print(f"Loading metric \"{metric_class_name}\"")
+    print(f"Loading metric \"{metric_class_name}\"", flush=True)
     extra_args = []
     if type(metric_class_name) in [list, tuple]:
         metric_class_name, *extra_args = metric_class_name
@@ -112,8 +112,14 @@ class EmbeddingSimilarity (TextMetrics):
     def compute (self, text_1, text_2):
 
         # Compute the embeddings
+
+        # TODO : souci si texte trop long
+        print("Computing embeddings")
+        print(text_1)
+        print(text_2)
+
         embedding_1 = self.model.embed(text_1)
-        embedding_2 = self.model.embed(text_2)
+        embedding_2 = self.model.embed(text_2[:300])
 
         # Compute the similarity
         similarity = float(embedding_1 @ embedding_2 / (embedding_1.norm() * embedding_2.norm()))

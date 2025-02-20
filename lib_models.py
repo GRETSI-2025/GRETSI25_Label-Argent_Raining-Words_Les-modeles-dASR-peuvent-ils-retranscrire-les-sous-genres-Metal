@@ -9,6 +9,7 @@ import sys
 from typing import override
 import huggingface_hub
 import torch
+import torchaudio
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, pipeline
 from nemo.collections.asr.models import EncDecMultiTaskModel
 
@@ -29,7 +30,7 @@ def get_model (model_class_name, memoize=True):
             return globals()["loaded_models"][model_class_name]
 
     # Load the model
-    print(f"Loading model \"{model_class_name}\"")
+    print(f"Loading model \"{model_class_name}\"", flush=True)
     model_class = getattr(sys.modules[__name__], model_class_name)
     model = model_class()
 
@@ -108,7 +109,7 @@ class PipelineASRModel (ASRModel, abc.ABC):
         super().__init__(*args, **kwargs)
 
         # Attributes
-        self.pipe = pipeline("feature-extraction", self.model_id)
+        self.pipe = pipeline("automatic-speech-recognition", self.model_id)
 
 
 
@@ -246,7 +247,7 @@ class Wav2vec2_Large_960h_Lv60_Self (ASRModel):
 
     def _setup (self):
 
-        # Load model and processor
+        # https://huggingface.co/docs/transformers/model_doc/wav2vec2
         processor = Wav2Vec2Processor.from_pretrained(os.path.join(args().models_directory, self.model_id))
         model = Wav2Vec2ForCTC.from_pretrained(os.path.join(args().models_directory, self.model_id))
         return processor, model
@@ -256,13 +257,12 @@ class Wav2vec2_Large_960h_Lv60_Self (ASRModel):
     @override
     def transcribe (self, audio_path):
 
-        # Tokenize
-        input_values = self.processor(audio_path, return_tensors="pt", padding="longest").input_values
-
-        # Retrieve logits
-        logits = self.model(input_values).logits
-
-        # Take argmax and decode
+        # https://huggingface.co/docs/transformers/model_doc/wav2vec2
+        audio_torch, orig_sr = torchaudio.load(audio_path, format="wav")
+        #audio_torch = torchaudio.functional.resample(audio_torch, orig_freq=orig_sr, new_freq=sr)
+        input_values = self.processor(audio_torch, return_tensors="pt", padding="longest").input_values.squeeze(0)
+        with torch.no_grad():
+            logits = self.model(input_values).logits
         predicted_ids = torch.argmax(logits, dim=-1)
         return self.processor.batch_decode(predicted_ids)[0]
 
