@@ -9,12 +9,12 @@ import sys
 from typing import override
 import huggingface_hub
 import torch
-import torchaudio
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, pipeline
 from nemo.collections.asr.models import EncDecMultiTaskModel
 
 # Project imports
 from arguments import args
+from lib_audio import load_audio
 
 #####################################################################################################################################################
 ##################################################################### FUNCTIONS #####################################################################
@@ -31,7 +31,7 @@ def get_model (model_class_name, memoize=True):
             return globals()["loaded_models"][memoization_key]
 
     # Load the model
-    print(f"Loading model \"{model_class_name}\"", flush=True)
+    print(f"Loading model \"{model_class_name}\"", file=sys.stderr, flush=True)
     model_class = getattr(sys.modules[__name__], model_class_name)
     model = model_class()
 
@@ -225,7 +225,7 @@ class Canary_1B (ASRModel):
     @override
     def transcribe (self, audio_path):
 
-        # https://huggingface.co/nvidia/canary-1b
+        # Transcribe
         return self.model.transcribe([audio_path])[0]
 
 
@@ -258,10 +258,12 @@ class Wav2vec2_Large_960h_Lv60_Self (ASRModel):
     @override
     def transcribe (self, audio_path):
 
-        # https://huggingface.co/docs/transformers/model_doc/wav2vec2
-        audio_torch, orig_sr = torchaudio.load(audio_path, format="wav")
-        #audio_torch = torchaudio.functional.resample(audio_torch, orig_freq=orig_sr, new_freq=sr)
-        input_values = self.processor(audio_torch, return_tensors="pt", padding="longest").input_values.squeeze(0)
+        # Needs data to be resampled at 16kHz
+        sampling_rate = 16000
+        audio = load_audio(audio_path, sampling_rate)
+
+        # Transcribe
+        input_values = self.processor(audio, return_tensors="pt", padding="longest", sampling_rate=sampling_rate).input_values.squeeze(0)
         with torch.no_grad():
             logits = self.model(input_values).logits
         predicted_ids = torch.argmax(logits, dim=-1)

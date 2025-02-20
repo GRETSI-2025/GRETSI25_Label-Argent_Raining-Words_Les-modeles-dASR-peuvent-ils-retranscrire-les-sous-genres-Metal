@@ -111,6 +111,10 @@ class EmbeddingSimilarity (TextMetrics):
     @override
     def compute (self, text_1, text_2):
 
+        # In case of empty texts, return 0
+        if text_1 == "" or text_2 == "":
+            return 0.0
+
         # Compute the embeddings
         embedding_1 = self.model.embed(text_1)
         embedding_2 = self.model.embed(text_2)

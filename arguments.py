@@ -24,8 +24,8 @@ def args ():
     parser.add_argument("--hf_key", type=str, help="Path to the Hugging Face token file", default=f"/Brain/private/{os.environ["LOGNAME"]}/misc/hugging_face.key")
 
     # Elements to use
-    parser.add_argument("--asr_models", type=list, help="List of models to evaluate", default=[#"Canary_1B",
-                                                                                               #"Wav2vec2_Large_960h_Lv60_Self",
+    parser.add_argument("--asr_models", type=list, help="List of models to evaluate", default=["Canary_1B",
+                                                                                               "Wav2vec2_Large_960h_Lv60_Self",
                                                                                                "Whisper_Large_V2",
                                                                                                "Whisper_Large_V3"])
     parser.add_argument("--metrics", type=list, help="Metrics or models used for computing similarity/error", default=["WER",

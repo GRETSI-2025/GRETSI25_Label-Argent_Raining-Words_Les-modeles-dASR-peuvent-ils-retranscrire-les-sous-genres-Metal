@@ -4,12 +4,13 @@
 
 # External imports
 import os
+import sys
 import pandas
 
 # Project imports
 from arguments import args
 from lib_models import get_model
-from lib_audio import list_from_source, get_audio_file
+from lib_audio import list_from_source, get_audio_path
 
 #####################################################################################################################################################
 ######################################################################### GO ########################################################################
@@ -18,11 +19,15 @@ from lib_audio import list_from_source, get_audio_file
 # Get the list of all file names to work on
 all_file_names = list_from_source(args().source)
 
+# Make sure output subdirectory exists
+output_directory = os.path.join(args().output_directory, "data")
+os.makedirs(output_directory, exist_ok=True)
+
 # Extract lyrics from all audio files using the models
 for asr_model in args().asr_models:
 
     # Load existing lyrics from file
-    lyrics_file_name = os.path.join(args().output_directory, asr_model.replace(os.path.sep, "-") + ".ods")
+    lyrics_file_name = os.path.join(output_directory, asr_model.replace(os.path.sep, "-") + ".ods")
     if args().force_lyrics_extraction or not os.path.exists(lyrics_file_name):
         all_lyrics = {}
     else:
@@ -43,10 +48,11 @@ for asr_model in args().asr_models:
             if file_name not in all_lyrics[source_sheet]["File"]:
 
                 # Go through ASR pipeline
-                print(f"Extracting lyrics for \"{file_name}\" with model \"{asr_model}\"", flush=True)
-                transcription = model.transcribe(get_audio_file(source, file_name))
+                print(f"Extracting lyrics for \"{file_name}\" with model \"{asr_model}\"", file=sys.stderr, flush=True)
+                transcription = model.transcribe(get_audio_path(source, file_name))
                 all_lyrics[source_sheet]["File"].append(file_name)
                 all_lyrics[source_sheet]["Lyrics"].append(transcription)
+                print(file_name, "-", transcription, file=sys.stderr, flush=True)
             
     # Save results to file
     with pandas.ExcelWriter(lyrics_file_name, engine="odf") as writer:

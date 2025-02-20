@@ -4,9 +4,11 @@
 
 # External imports
 import os
+import sys
 import pandas
 import yt_dlp
 import itertools
+import torchaudio
 import demucs.separate
 from pathlib import Path
 
@@ -27,7 +29,7 @@ def list_from_source (source=None):
     
 #####################################################################################################################################################
 
-def get_audio_file (source, file_name_no_extension):
+def get_audio_path (source, file_name_no_extension):
 
     # Search for the audio file in the source
     for file in os.listdir(os.path.join(args().dataset, "audio", source)):
@@ -39,6 +41,20 @@ def get_audio_file (source, file_name_no_extension):
 
 #####################################################################################################################################################
 
+def load_audio (audio_path, resample=None):
+
+    # Get audio file
+    audio, sampling_rate = torchaudio.load(audio_path, format="wav")
+    
+    # Resample if needed
+    if resample:
+        audio = torchaudio.functional.resample(audio, orig_freq=sampling_rate, new_freq=resample)
+    
+    # Return audio
+    return audio
+
+#####################################################################################################################################################
+
 def normalize_lyrics (lyrics):
 
     # Remove capitals and special characters
@@ -47,11 +63,22 @@ def normalize_lyrics (lyrics):
 
     # Remove simple artifacts such as having twice the same word consecutively
     lyrics = [key for key, _group in itertools.groupby(lyrics)]
-    return "".join(lyrics)
+    lyrics = "".join(lyrics)
+
+    # Remove leading and trailing spaces
+    lyrics = lyrics.strip()
+    return lyrics
 
 #####################################################################################################################################################
 
 def get_lyrics (lyrics_file, source, file_name_no_extension, memoize=True):
+
+    # Factorize stuff to do when loading a file
+    def _load_file ():
+        file = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None, dtype=str)
+        for sheet in file:
+            file[sheet] = file[sheet].fillna("")
+        return file
 
     # Check if the file is already in global memory to avoid reloading
     if memoize:
@@ -59,10 +86,10 @@ def get_lyrics (lyrics_file, source, file_name_no_extension, memoize=True):
         if "loaded_files" not in globals():
             globals()["loaded_files"] = {}
         if lyrics_file not in globals()["loaded_files"]:
-            globals()["loaded_files"][memoization_key] = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
+            globals()["loaded_files"][memoization_key] = _load_file()
         file = globals()["loaded_files"][memoization_key]
     else:
-        file = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
+        file = _load_file()
     
     # Get row containing sheet name
     sheet_name = source.replace(os.path.sep, "___")
@@ -83,7 +110,6 @@ def download_audio (url, source, file_name, force_dl=False):
         os.makedirs(target_directory)
 
     # Ignore if the file already exists
-    print(f"Downloading \"{file_name}\" in source \"songs/{source}\"")
     target_file = os.path.join(target_directory, file_name)
     if not os.path.exists(target_file + ".wav") or force_dl:
 
@@ -94,6 +120,7 @@ def download_audio (url, source, file_name, force_dl=False):
                     "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}]}
 
         # Get the file
+        print(f"Downloading \"{file_name}\" in source \"songs/{source}\"", file=sys.stderr, flush=True)
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
@@ -107,11 +134,11 @@ def extract_singer (source, file_name, force_extract=False):
         os.makedirs(target_directory)
 
     # Check if the file is already in global memory to avoid reloading
-    print(f"Extracting singer from \"{file_name}\" into source \"demucs/{source}\"")
     target_file = os.path.join(target_directory, file_name) + ".wav"
     if not os.path.exists(target_file) or force_extract:
         
         # Extract singer from the audio file
+        print(f"Extracting singer from \"{file_name}\" into source \"demucs/{source}\"", file=sys.stderr, flush=True)
         source_file = os.path.join(args().dataset, "audio", "songs", source, file_name) + ".wav"
         demucs.separate.main(["--two-stems", "vocals", "-n", "htdemucs_ft", source_file, "-o", target_file])
 

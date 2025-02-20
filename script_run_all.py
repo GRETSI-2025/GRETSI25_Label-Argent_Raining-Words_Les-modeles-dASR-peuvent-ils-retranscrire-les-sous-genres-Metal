@@ -18,18 +18,22 @@ def print_title (title, size=100, character="#"):
 # Get dataset
 print_title("Get dataset")
 import script_1_get_dataset
+print("Done")
 
 # Extract lyrics
 print_title("Extract lyrics")
 import script_2_extract_lyrics
+print("Done")
 
 # Compute metrics
 print_title("Compute metrics")
 import script_3_compute_metrics
+print("Done")
 
 # Analyze EMVD
 print_title("Analyze EMVD")
 import script_4_analyze_emvd
+print("Done")
 
 #####################################################################################################################################################
 #####################################################################################################################################################
