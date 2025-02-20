@@ -5,7 +5,6 @@
 # External imports
 import os
 import sys
-from pathlib import Path
 import pandas
 import pickle
 import torch
@@ -13,91 +12,18 @@ import matplotlib.pyplot as pyplot
 
 # Project imports
 from arguments import args
+from lib_utils import *
+from lib_lyrics import *
 from lib_models import *
 from lib_metrics import *
-
-#####################################################################################################################################################
-##################################################################### FUNCTIONS #####################################################################
-#####################################################################################################################################################
-
-def print_title (title, size=100, character="#"):
-
-    # Print centered title
-    print("", flush=True)
-    print("", flush=True)
-    print(character * size, flush=True)
-    print(character + " " * ((size - len(title) - 1) // 2) + title + " " * ((size - len(title) - 2) // 2) + character, flush=True)
-    print(character * size, flush=True)
-    print("", flush=True)
-
-#####################################################################################################################################################
-
-def list_from_source (source=None):
-
-    # List required sources
-    source_path = os.path.join(args().dataset, "audio") if source is None else os.path.join(args().dataset, "audio", source)
-    file_names = [str(file.relative_to(os.path.join(args().dataset, "audio"))) for file in Path(source_path).rglob("*") if file.is_file()]
-    actual_sources = list(set(file_name[:file_name.rfind(os.path.sep)] for file_name in file_names))
-    return {s: [file_name[file_name.rfind(os.path.sep)+1:file_name.rfind(".")] for file_name in file_names if file_name.startswith(s)] for s in actual_sources}
-    
-#####################################################################################################################################################
-
-def get_audio (source, file_name_no_extension):
-
-    # Search for the audio file in the source
-    for file in os.listdir(os.path.join(args().dataset, "audio", source)):
-        if file.startswith(file_name_no_extension):
-            return os.path.join(args().dataset, "audio", source, file)
-    
-    # Raise exception if the audio file is not found
-    raise Exception(f"Audio file not found for {file_name_no_extension}")
-
-#####################################################################################################################################################
-
-def normalize_lyrics (lyrics):
-
-    # Remove capitals and special characters
-    lyrics = lyrics.lower()
-    return "".join([char for char in lyrics if char.isalnum() or char.isspace()])
-
-#####################################################################################################################################################
-
-def get_lyrics (lyrics_file, source, file_name_no_extension, memoize=True):
-
-    # Check if the file is already in global memory to avoid reloading
-    if memoize:
-        if "loaded_files" not in globals():
-            globals()["loaded_files"] = {}
-        if lyrics_file not in globals()["loaded_files"]:
-            globals()["loaded_files"][lyrics_file] = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
-        file = globals()["loaded_files"][lyrics_file]
-    else:
-        file = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
-    
-    # Get row containing sheet name
-    sheet_name = source.replace(os.path.sep, "___")
-    row = file[sheet_name].loc[file[sheet_name]["File"] == file_name_no_extension]
-    if not row.empty:
-        return {key: normalize_lyrics(row[key].values[0]) for key in row.keys() if key.startswith("Lyrics")}
-
-    # Raise exception if the lyrics are not found
-    raise Exception(f"Lyrics not found for {file_name_no_extension}")
- 
-#####################################################################################################################################################
-####################################################################### SCRIPT ######################################################################
-#####################################################################################################################################################
-
-###################################
-########## PREPARE STUFF ##########
-###################################
 
 # Get the list of all file names to work on
 all_file_names = list_from_source()
 print(f"Loaded files {all_file_names}", file=sys.stderr, flush=True)
 
-###################################
-########## EXTRACT LYRICS #########
-###################################
+#####################################################################################################################################################
+################################################################### EXTRACT LYRICS ##################################################################
+#####################################################################################################################################################
 
 # Title
 print_title("EXTRACT LYRICS")
@@ -128,7 +54,7 @@ for asr_model in args().asr_models:
 
                 # Go through ASR pipeline
                 print(f"Extracting lyrics for \"{file_name}\" with model \"{asr_model}\"", flush=True)
-                transcription = model.transcribe(get_audio(source, file_name))
+                transcription = model.transcribe(get_audio_file(source, file_name))
                 all_lyrics[source_sheet]["File"].append(file_name)
                 all_lyrics[source_sheet]["Lyrics"].append(transcription)
             
@@ -137,9 +63,10 @@ for asr_model in args().asr_models:
         for sheet_name, sheet in all_lyrics.items():
             pandas.DataFrame(sheet).to_excel(writer, sheet_name=sheet_name, index=False)
 
-###################################
-######### COMPUTE METRICS #########
-###################################
+
+#####################################################################################################################################################
+################################################################## COMPUTE METRICS ##################################################################
+#####################################################################################################################################################
 
 # Title
 print_title("COMPUTE METRICS")
@@ -200,9 +127,9 @@ for source in sorted(all_file_names):
                 all_values = [all_metrics[source][file_name][asr_model][lyrics_version][metric_name] for lyrics_version in all_metrics[source][file_name][asr_model]]
                 print(f"|   |   |__ [METRIC] {metric_name} -- {metric.best.__name__}({all_values}) = {metric.best(all_values)}", flush=True)
 
-###################################
-########### ANALYZE EMVD ##########
-###################################
+#####################################################################################################################################################
+#################################################################### ANALYZE_EMVD ###################################################################
+#####################################################################################################################################################
 
 # Title
 print_title("ANALYZE EMVD")

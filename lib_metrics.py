@@ -9,7 +9,6 @@ import sys
 from typing import override
 
 # Project imports
-from arguments import args
 from lib_models import *
 
 #####################################################################################################################################################
