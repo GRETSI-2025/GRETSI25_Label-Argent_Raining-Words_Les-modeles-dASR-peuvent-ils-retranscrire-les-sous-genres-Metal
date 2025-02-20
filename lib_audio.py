@@ -6,6 +6,7 @@
 import os
 import pandas
 import yt_dlp
+import itertools
 import demucs.separate
 from pathlib import Path
 
@@ -42,7 +43,11 @@ def normalize_lyrics (lyrics):
 
     # Remove capitals and special characters
     lyrics = lyrics.lower()
-    return "".join([char for char in lyrics if char.isalnum() or char.isspace()])
+    lyrics = [char for char in lyrics if char.isalnum() or char.isspace()]
+
+    # Remove simple artifacts such as having twice the same word consecutively
+    lyrics = [key for key, _group in itertools.groupby(lyrics)]
+    return "".join(lyrics)
 
 #####################################################################################################################################################
 
@@ -50,11 +55,12 @@ def get_lyrics (lyrics_file, source, file_name_no_extension, memoize=True):
 
     # Check if the file is already in global memory to avoid reloading
     if memoize:
+        memoization_key = lyrics_file
         if "loaded_files" not in globals():
             globals()["loaded_files"] = {}
         if lyrics_file not in globals()["loaded_files"]:
-            globals()["loaded_files"][lyrics_file] = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
-        file = globals()["loaded_files"][lyrics_file]
+            globals()["loaded_files"][memoization_key] = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
+        file = globals()["loaded_files"][memoization_key]
     else:
         file = pandas.read_excel(lyrics_file, engine="odf", sheet_name=None)
     
@@ -77,6 +83,7 @@ def download_audio (url, source, file_name, force_dl=False):
         os.makedirs(target_directory)
 
     # Ignore if the file already exists
+    print(f"Downloading \"{file_name}\" in source \"songs/{source}\"")
     target_file = os.path.join(target_directory, file_name)
     if not os.path.exists(target_file + ".wav") or force_dl:
 
@@ -100,6 +107,7 @@ def extract_singer (source, file_name, force_extract=False):
         os.makedirs(target_directory)
 
     # Check if the file is already in global memory to avoid reloading
+    print(f"Extracting singer from \"{file_name}\" into source \"demucs/{source}\"")
     target_file = os.path.join(target_directory, file_name) + ".wav"
     if not os.path.exists(target_file) or force_extract:
         

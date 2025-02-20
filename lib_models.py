@@ -24,10 +24,11 @@ def get_model (model_class_name, memoize=True):
 
     # Check if the model is already in global memory to avoid reloading
     if memoize:
+        memoization_key = model_class_name
         if "loaded_models" not in globals():
             globals()["loaded_models"] = {}
-        if model_class_name in globals()["loaded_models"]:
-            return globals()["loaded_models"][model_class_name]
+        if memoization_key in globals()["loaded_models"]:
+            return globals()["loaded_models"][memoization_key]
 
     # Load the model
     print(f"Loading model \"{model_class_name}\"", flush=True)
@@ -36,7 +37,7 @@ def get_model (model_class_name, memoize=True):
 
     # Memoize if needed
     if memoize:
-        globals()["loaded_models"][model_class_name] = model
+        globals()["loaded_models"][memoization_key] = model
     return model
 
 #####################################################################################################################################################
