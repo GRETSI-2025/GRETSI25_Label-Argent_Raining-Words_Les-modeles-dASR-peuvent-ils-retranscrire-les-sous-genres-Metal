@@ -40,7 +40,7 @@ def get_metric (metric_class_name, memoize=True):
     return metric
 
 #####################################################################################################################################################
-################################################################## ABSTRACT CLASSES #################################################################
+###################################################################### CLASSES ######################################################################
 #####################################################################################################################################################
 
 class TextMetrics (abc.ABC):
@@ -79,15 +79,19 @@ class WER (TextMetrics):
         super().__init__(best=min, *args, **kwargs)
 
         # Attributes
-        self.wer = evaluate.load("wer")
+        self.model = None
 
 
 
     @override
     def compute (self, text_1, text_2):
 
+        # Load the model as late as possible
+        if self.model is None:
+            self.model = evaluate.load("wer")
+
         # Compute the error
-        error = self.wer.compute(predictions=[text_2], references=[text_1])
+        error = self.model.compute(predictions=[text_2], references=[text_1])
         return error
 
 
@@ -104,7 +108,8 @@ class EmbeddingSimilarity (TextMetrics):
         super().__init__(best=max, *args, **kwargs)
 
         # Attributes
-        self.model = lib_models.get_model(model_name)
+        self.model_name = model_name
+        self.model = None
 
 
 
@@ -114,6 +119,10 @@ class EmbeddingSimilarity (TextMetrics):
         # In case of empty texts, return 0
         if text_1 == "" or text_2 == "" or "<|nospeech|>" in text_1 or "<|nospeech|>" in text_2:
             return 0.0
+
+        # Load the model as late as possible
+        if self.model is None:
+            self.model = lib_models.get_model(self.model_name)
 
         # Compute the embeddings
         embedding_1 = self.model.embed(text_1)
