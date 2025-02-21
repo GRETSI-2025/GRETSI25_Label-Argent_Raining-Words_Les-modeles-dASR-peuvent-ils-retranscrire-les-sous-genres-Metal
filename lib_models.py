@@ -11,10 +11,12 @@ import huggingface_hub
 import torch
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, pipeline
 from nemo.collections.asr.models import EncDecMultiTaskModel
+from speechbrain.pretrained import SepformerSeparation
+import logging
 
 # Project imports
 from arguments import args
-from lib_audio import load_audio
+import lib_audio
 
 #####################################################################################################################################################
 ##################################################################### FUNCTIONS #####################################################################
@@ -71,9 +73,13 @@ class BaseModel (abc.ABC):
             print(f"Downloading model {self.model_id} to {model_path}", file=sys.stderr, flush=True)
             huggingface_hub.login(token=open(args().hf_key, "r").read().strip())
             huggingface_hub.snapshot_download(repo_id=self.model_id, local_dir=model_path)
-
-            # Set permissions for shared use
-            os.chmod(model_path, 0o777)
+            
+            # Correct access rights for shared usage
+            for root, dirs, files in os.walk(model_path):
+                for directory in dirs:
+                    os.chmod(os.path.join(root, directory), 0o777)
+                for file in files:
+                    os.chmod(os.path.join(root, file), 0o777)
 
 
 
@@ -212,21 +218,27 @@ class Canary_1B (ASRModel):
 
     def _setup (self):
         
+        # Disable logging
+        logging.getLogger('nemo_logger').setLevel(logging.ERROR)
+
         # https://huggingface.co/nvidia/canary-1b
         # Requires to set NEMO_CACHE_DIR to local directory
-        canary_model = EncDecMultiTaskModel.from_pretrained(self.model_id)
-        decode_cfg = canary_model.cfg.decoding
+        model = EncDecMultiTaskModel.from_pretrained(self.model_id)
+        decode_cfg = model.cfg.decoding
         decode_cfg.beam.beam_size = 1
-        canary_model.change_decoding_strategy(decode_cfg)
-        return canary_model
+        model.change_decoding_strategy(decode_cfg)
+        return model
 
 
 
     @override
     def transcribe (self, audio_path):
 
+        # Needs data to be mono and resampled at 16kHz
+        audio = lib_audio.load_audio(audio_path, 16000, True)
+
         # Transcribe
-        return self.model.transcribe([audio_path])[0]
+        return self.model.transcribe(audio.squeeze(0), source_lang="en", target_lang="en", task="asr", pnc="no")[0]
 
 
 
@@ -258,9 +270,9 @@ class Wav2vec2_Large_960h_Lv60_Self (ASRModel):
     @override
     def transcribe (self, audio_path):
 
-        # Needs data to be resampled at 16kHz
+        # Needs data to be mono and resampled at 16kHz
         sampling_rate = 16000
-        audio = load_audio(audio_path, sampling_rate)
+        audio = lib_audio.load_audio(audio_path, sampling_rate, True)
 
         # Transcribe
         input_values = self.processor(audio, return_tensors="pt", padding="longest", sampling_rate=sampling_rate).input_values.squeeze(0)

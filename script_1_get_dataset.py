@@ -4,7 +4,7 @@
 
 # Project imports
 from arguments import args
-from lib_audio import download_audio, extract_singer
+import lib_audio
 
 # List of files to get
 dataset_urls = {
@@ -27,15 +27,15 @@ dataset_urls = {
 #####################################################################################################################################################
 
 # Get all songs
-for source in dataset_urls:
-    for url, artist, title in dataset_urls[source]:
+for style in dataset_urls:
+    for url, artist, title in dataset_urls[style]:
 
         # Download audio to "songs" directory
         file_name = f"{artist} - {title}"
-        download_audio(url, source, file_name, force_dl=args().force_download_audio)
+        lib_audio.download_audio(url, style, file_name, force_dl=args().force_download_audio)
 
         # Extract audio to "demucs" directory
-        #extract_singer(source, file_name, force_extract=args().force_download_audio)
+        lib_audio.extract_vocals(style, file_name, force_extract=args().force_download_audio)
 
 #####################################################################################################################################################
 #####################################################################################################################################################

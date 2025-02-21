@@ -9,7 +9,7 @@ import sys
 from typing import override
 
 # Project imports
-from lib_models import *
+import lib_models
 
 #####################################################################################################################################################
 ##################################################################### FUNCTIONS #####################################################################
@@ -104,7 +104,7 @@ class EmbeddingSimilarity (TextMetrics):
         super().__init__(best=max, *args, **kwargs)
 
         # Attributes
-        self.model = get_model(model_name)
+        self.model = lib_models.get_model(model_name)
 
 
 
@@ -112,7 +112,7 @@ class EmbeddingSimilarity (TextMetrics):
     def compute (self, text_1, text_2):
 
         # In case of empty texts, return 0
-        if text_1 == "" or text_2 == "":
+        if text_1 == "" or text_2 == "" or "<|nospeech|>" in text_1 or "<|nospeech|>" in text_2:
             return 0.0
 
         # Compute the embeddings

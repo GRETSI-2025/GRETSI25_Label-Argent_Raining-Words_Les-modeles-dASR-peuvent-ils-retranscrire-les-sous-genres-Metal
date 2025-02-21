@@ -16,7 +16,7 @@ def args ():
     parser = argparse.ArgumentParser()
 
     # Paths
-    parser.add_argument("--dataset", type=str, help="Path to the dataset", default="/Brain/public/datasets/metal/data")
+    parser.add_argument("--datasets_path", type=str, help="Path to the dataset", default="/Brain/public/datasets/metal/data")
     parser.add_argument("--output_directory", type=str, help="Path to the output directory", default="/Brain/public/datasets/metal/output")
     parser.add_argument("--models_directory", type=str, help="Path to where models are downloaded", default="/Brain/public/models")
 
@@ -32,7 +32,6 @@ def args ():
                                                                                                                        ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"),
                                                                                                                        ("EmbeddingSimilarity", "All_MiniLM_L6_V2"),
                                                                                                                        ("EmbeddingSimilarity", "All_MPNet_Base_V2")])
-    parser.add_argument("--source", type=str, help="Source to use in the scripts, as a subdirectory of 'audio' (None for all)", default="songs")
 
     # Control parts of the scripts to run or not
     parser.add_argument("--force_download_audio", type=bool, help="Force re-downloading of audio files", default=False)
