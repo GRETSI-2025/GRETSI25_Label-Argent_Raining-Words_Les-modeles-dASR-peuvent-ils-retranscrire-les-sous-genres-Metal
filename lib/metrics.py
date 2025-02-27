@@ -1,4 +1,32 @@
 #####################################################################################################################################################
+###################################################################### LICENSE ######################################################################
+#####################################################################################################################################################
+#
+#    Copyright (C) 2025  Bastien Pasdeloup & Axel Marmoret
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+#####################################################################################################################################################
+################################################################### DOCUMENTATION ###################################################################
+#####################################################################################################################################################
+
+"""
+    This module contains the classes to evaluate metrics.
+    Metrics should be loaded using the "get_metric" function.
+"""
+
+#####################################################################################################################################################
 ################################################################### PREPARE STUFF ###################################################################
 #####################################################################################################################################################
 
@@ -6,38 +34,10 @@
 import abc
 import evaluate
 import sys
-from typing import override
+from typing import *
 
 # Project imports
-import lib_models
-
-#####################################################################################################################################################
-##################################################################### FUNCTIONS #####################################################################
-#####################################################################################################################################################
-
-def get_metric (metric_class_name, memoize=True):
-
-    # Check if the metric is already in global memory to avoid reloading
-    if memoize:
-        memoization_key = str(metric_class_name)
-        if "loaded_metrics" not in globals():
-            globals()["loaded_metrics"] = {}
-        if memoization_key in globals()["loaded_metrics"]:
-            return globals()["loaded_metrics"][memoization_key]
-
-    # Metric can be passed as a tuple with arguments
-    extra_args = []
-    if type(metric_class_name) in [list, tuple]:
-        metric_class_name, *extra_args = metric_class_name
-    
-    # Load the metric
-    metric_class = getattr(sys.modules[__name__], metric_class_name)
-    metric = metric_class(*extra_args)
-
-    # Memoize if needed
-    if memoize:
-        globals()["loaded_metrics"][memoization_key] = metric
-    return metric
+import lib.models.loader
 
 #####################################################################################################################################################
 ###################################################################### CLASSES ######################################################################
@@ -122,11 +122,11 @@ class EmbeddingSimilarity (TextMetrics):
 
         # Load the model as late as possible
         if self.model is None:
-            self.model = lib_models.get_model(self.model_name)
+            self.model = lib.models.loader.get_model(self.model_name)
 
         # Compute the embeddings
-        embedding_1 = self.model.embed(text_1)
-        embedding_2 = self.model.embed(text_2)
+        embedding_1 = self.model.run(text_1)
+        embedding_2 = self.model.run(text_2)
 
         # Compute the similarity
         similarity = float(embedding_1 @ embedding_2 / (embedding_1.norm() * embedding_2.norm()))
@@ -134,5 +134,21 @@ class EmbeddingSimilarity (TextMetrics):
 
 
 
+#####################################################################################################################################################
+##################################################################### FUNCTIONS #####################################################################
+#####################################################################################################################################################
+
+def get_metric ( metric_class_name: Union[str, list[str], tuple[str]]
+               ) ->                 TextMetrics:
+
+    # Metric can be passed as a tuple with arguments
+    extra_args = []
+    if type(metric_class_name) in [list, tuple]:
+        metric_class_name, *extra_args = metric_class_name
+    
+    # Load the metric
+    metric_class = getattr(sys.modules[__name__], metric_class_name)
+    return metric_class(*extra_args)
+    
 #####################################################################################################################################################
 #####################################################################################################################################################

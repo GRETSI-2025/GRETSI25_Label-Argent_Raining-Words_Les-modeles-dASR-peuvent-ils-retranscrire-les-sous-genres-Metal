@@ -22,63 +22,64 @@
 #####################################################################################################################################################
 
 """
-    This script performs analyzes on the songs and source-separated datasets.
-    It produces figures for each metric, to compare the performance of the ASR models on the datasets, per style.
+    This module contains the function to load models.
 """
 
 #####################################################################################################################################################
 ################################################################### PREPARE STUFF ###################################################################
 #####################################################################################################################################################
 
-# External imports
-import os
-import pickle
-import torch
-import plotly.express as px
-import pandas
+# External imports
+import sys
+from typing import *
 
 # Project imports
-from lib.arguments import script_args
-import lib.audio
-import lib.metrics
+import lib.models.base
+import lib.models.automatic_speech_recognition
+import lib.models.text_embedding
+import lib.models.source_separation
 
 #####################################################################################################################################################
-######################################################################### GO ########################################################################
+##################################################################### FUNCTIONS #####################################################################
 #####################################################################################################################################################
 
-# Produce a set of figures per dataset
-datasets = [f for f in os.listdir(os.path.join(script_args().datasets_path, "audio")) if f != "emvd"]
-for dataset in datasets:
+def get_model ( model_class_name: Union[str, list[str], tuple[str]],
+                memoize:          bool = True
+              ) ->                lib.models.base.BaseModel:
 
-    # Get the list of all files to work on
-    all_file_paths = lib.audio.list_from_dataset(dataset)
+    """
+        Function to get a model instance.
+        The model will be memoized in global memory to avoid reloading.
+        In:
+            * model_class_name: The name of the model class, possibly with extra arguments.
+            * The model instance.
+    """
 
-    # Load metrics from file
-    metrics_file_path = os.path.join(script_args().output_directory, "data", "metrics.pt")
-    with open(metrics_file_path, "rb") as file:
-        all_metrics = pickle.load(file)
+    # Check if the model is already in global memory to avoid reloading
+    if memoize:
+        memoization_key = str(model_class_name)
+        if "loaded_models" not in globals():
+            globals()["loaded_models"] = {}
+        if memoization_key in globals()["loaded_models"]:
+            return globals()["loaded_models"][memoization_key]
 
-    # Build a plot per metric
-    for metric_name in script_args().metrics:
-        
-        # Create dataframe for the figure
-        metric = lib.metrics.get_metric(metric_name)
-        data = []
-        for sub_dataset in all_file_paths:
-            style = sub_dataset.split(os.path.sep)[-1]
-            for asr_model in script_args().asr_models:
-                best_per_song = [metric.best(all_metrics[sub_dataset][file_name][asr_model][lyrics_version][metric_name] for lyrics_version in all_metrics[sub_dataset][file_name][asr_model]) for file_name in all_file_paths[sub_dataset]]
-                mean_value = torch.mean(torch.tensor(best_per_song)).item()
-                data.append({"Style": style, "Model": asr_model, "Metric": metric_name, "Value": mean_value})
-        
-        # Build polar figure
-        fig = px.line_polar(pandas.DataFrame(data), r="Value", theta="Style", color="Model", line_close=True)
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True)
-
-        # Save figure
-        figure_file_path = os.path.join(script_args().output_directory, "figures", f"{dataset} - {metric_name}.png")
-        fig.write_image(figure_file_path)
-        os.chmod(figure_file_path, 0o777)
+    # Model can be passed as a tuple with arguments
+    extra_args = []
+    if type(model_class_name) in [list, tuple]:
+        model_class_name, *extra_args = model_class_name
     
+    # Load the model
+    print(f"Loading model \"{model_class_name}\"", file=sys.stderr, flush=True)
+    for module in sys.modules:
+        if module.startswith("lib.models.") and hasattr(sys.modules[module], model_class_name):
+            model_class = getattr(sys.modules[module], model_class_name)
+            model = model_class(*extra_args)
+            break
+
+    # Memoize if needed
+    if memoize:
+        globals()["loaded_models"][memoization_key] = model
+    return model
+
 #####################################################################################################################################################
-#####################################################################################################################################################:
+#####################################################################################################################################################

@@ -22,9 +22,8 @@
 #####################################################################################################################################################
 
 """
-    This script extracts lyrics from audio files using ASR models.
-    The lyrics are saved in an ODS file under separate sheets for each dataset.
-    Each sheet contains two columns: "File" and "Lyrics".
+    This module contains the function to parse the script arguments.
+    Constants in the program are initialized in arguments to allow to change them easily.
 """
 
 #####################################################################################################################################################
@@ -32,56 +31,69 @@
 #####################################################################################################################################################
 
 # External imports
+import argparse
 import os
-import sys
-import pandas
-
-# Project imports
-from lib.arguments import script_args
-import lib.audio
-import lib.models.loader
 
 #####################################################################################################################################################
-######################################################################### GO ########################################################################
+##################################################################### FUNCTIONS #####################################################################
 #####################################################################################################################################################
 
-# Get the list of all files to work on
-all_files = lib.audio.list_from_dataset()
+def script_args ():
 
-# Extract lyrics from all audio files using the models
-for asr_model in script_args().asr_models:
+    """
+        Function to parse the script arguments.
+        In:
+            * None.
+        Out:
+            * The parsed arguments
+    """
 
-    # Load existing lyrics from file
-    lyrics_file_path = os.path.join(script_args().output_directory, "data", asr_model.replace(os.path.sep, "-") + ".ods")
-    if not os.path.exists(lyrics_file_path):
-        all_lyrics = {}
-    else:
-        dataframes = pandas.read_excel(lyrics_file_path, engine="odf", sheet_name=None)
-        all_lyrics = {sheet: dataframes[sheet].to_dict(orient="list") for sheet in dataframes}
+    # Prepare parser
+    parser = argparse.ArgumentParser()
 
-    # One sheet per dataset
-    for dataset in all_files:
-        dataset_sheet = dataset.replace(os.path.sep, "___")
-        if dataset_sheet not in all_lyrics:
-            all_lyrics[dataset_sheet] = {"File": [], "Lyrics": []}
-        
-        # One line per file
-        for file_name in all_files[dataset]:
-            if file_name not in all_lyrics[dataset_sheet]["File"]:
-
-                # Go through ASR pipeline
-                print(f"Extracting lyrics for \"{file_name}\" with model \"{asr_model}\"", file=sys.stderr, flush=True)
-                model = lib.models.loader.get_model(asr_model)
-                transcription = model.run(lib.audio.get_audio_path(dataset, file_name))
-                all_lyrics[dataset_sheet]["File"].append(file_name)
-                all_lyrics[dataset_sheet]["Lyrics"].append(transcription)
-                print(f"Transcription: {transcription}", file=sys.stderr, flush=True)
-            
-    # Save results to file
-    with pandas.ExcelWriter(lyrics_file_path, engine="odf") as writer:
-        for sheet_name, sheet in all_lyrics.items():
-            pandas.DataFrame(sheet).to_excel(writer, sheet_name=sheet_name, index=False)
-    os.chmod(lyrics_file_path, 0o777)
+    parser.add_argument("--datasets_path",
+                        type=str,
+                        help="Path to the dataset",
+                        default="/Brain/public/datasets/metal/data")
     
+    parser.add_argument("--output_directory",
+                        type=str,
+                        help="Path to the output directory",
+                        default="/Brain/public/datasets/metal/output")
+    
+    parser.add_argument("--models_directory",
+                        type=str,
+                        help="Path to where models are downloaded",
+                        default="/Brain/public/models")
+
+    parser.add_argument("--hf_key_path",
+                        type=str,
+                        help="Path to the Hugging Face token file",
+                        default=f"/Brain/private/{os.environ["LOGNAME"]}/misc/hugging_face.key")
+
+    parser.add_argument("--source_separation_models",
+                        type=list,
+                        help="List of models to use for source separation",
+                        default=[("Demucs", "mdx_extra")])
+    
+    parser.add_argument("--asr_models",
+                        type=list,
+                        help="List of models to evaluate",
+                        default=["Canary_1B",
+                                 "Wav2vec2_Large_960h_Lv60_Self",
+                                 "Whisper_Large_V2",
+                                 "Whisper_Large_V3"])
+    
+    parser.add_argument("--metrics",
+                        type=list,
+                        help="Metrics or models used for computing similarity/error",
+                        default=["WER",
+                                 ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"),
+                                 ("EmbeddingSimilarity", "All_MiniLM_L6_V2"),
+                                 ("EmbeddingSimilarity", "All_MPNet_Base_V2")])
+
+    # Go
+    return parser.parse_args()
+
 #####################################################################################################################################################
 #####################################################################################################################################################
