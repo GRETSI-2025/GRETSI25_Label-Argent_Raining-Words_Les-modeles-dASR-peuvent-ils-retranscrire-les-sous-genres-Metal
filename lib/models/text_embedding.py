@@ -68,6 +68,7 @@ class Gte_Qwen2_1d5B_Instruct (lib.models.base.HuggingFaceModel):
 
         # Attributes
         self.pipe = None
+        self.max_seq_length = 32000
 
     #############################################################################################################################################
 
@@ -136,6 +137,7 @@ class All_MiniLM_L6_V2 (lib.models.base.HuggingFaceModel):
 
         # Attributes
         self.pipe = None
+        self.max_seq_length = 256
 
     #############################################################################################################################################
 
@@ -204,6 +206,7 @@ class All_MPNet_Base_V2 (lib.models.base.HuggingFaceModel):
 
         # Attributes
         self.pipe = None
+        self.max_seq_length = 128
 
     #############################################################################################################################################
 

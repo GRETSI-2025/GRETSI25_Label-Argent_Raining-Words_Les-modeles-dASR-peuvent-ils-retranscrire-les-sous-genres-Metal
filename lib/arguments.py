@@ -79,15 +79,18 @@ def script_args ():
     parser.add_argument("--asr_models",
                         type=list,
                         help="List of models to evaluate",
-                        default=["Canary_1B",
-                                 "Wav2vec2_Large_960h_Lv60_Self",
+                        default=["Whisper_Large_V3",
                                  "Whisper_Large_V2",
-                                 "Whisper_Large_V3"])
+                                 "Phi_4_Multimodal_Instruct",
+                                 "Canary_1B",
+                                 "Wav2vec2_Large_960h_Lv60_Self"])
     
     parser.add_argument("--metrics",
                         type=list,
                         help="Metrics or models used for computing similarity/error",
                         default=["WER",
+                                 "BLEU",
+                                 "ROUGE",
                                  ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"),
                                  ("EmbeddingSimilarity", "All_MiniLM_L6_V2"),
                                  ("EmbeddingSimilarity", "All_MPNet_Base_V2")])

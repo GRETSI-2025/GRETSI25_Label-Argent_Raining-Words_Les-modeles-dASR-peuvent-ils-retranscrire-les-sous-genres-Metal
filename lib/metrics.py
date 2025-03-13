@@ -35,6 +35,8 @@ import abc
 import evaluate
 import sys
 from typing import *
+import rouge
+import sacrebleu.metrics
 
 # Project imports
 import lib.models.loader
@@ -45,64 +47,156 @@ import lib.models.loader
 
 class TextMetrics (abc.ABC):
 
+    """
+        Abstract class to evaluate text metrics.
+    """
 
+    #############################################################################################################################################
 
-    def __init__ (self, best, *args, **kwargs):
-        
+    def __init__ ( self,
+                   best:     Callable[[float, float], float],
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
+
+        """
+            Constructor for the class.
+            In:
+                * best:   The best value for the metric (max or min).
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+
         # Inherit from parent class
         super().__init__(*args, **kwargs)
 
         # Attributes
         self.best = best
 
+    #############################################################################################################################################
 
+    def compute ( self,
+                  text_ref:  str,
+                  text_pred: str
+                ) ->         float:
+
+        """
+            Function to compute the metric.
+            Takes care of edge cases.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
+
+        # In case of empty texts, return the worst score
+        if text_ref == "" or text_pred == "" \
+        or "<|nospeech|>" in text_ref or "<|nospeech|>" in text_pred \
+        or "lyrics are not provided" in text_ref or "lyrics are not provided" in text_pred:
+            return 0.0 if self.best == max else 1.0
+        
+        # Compute the metric
+        return self._compute(text_ref, text_pred)
+    
+    #############################################################################################################################################
 
     @abc.abstractmethod
-    def compute (self, text_1, text_2):
+    def _compute ( self,
+                   text_ref:  str,
+                   text_pred: str
+                 ) ->         float:
+
+        """
+            Function to compute the metric, to be defined in children classes.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
 
         # Abstract method
         raise NotImplementedError("Should be defined in children classes.")
 
+    #############################################################################################################################################
+    #############################################################################################################################################
 
-
-#####################################################################################################################################################
-################################################################### METRIC CLASSES ##################################################################
 #####################################################################################################################################################
 
 class WER (TextMetrics):
 
+    """
+        Class to compute the Word Error Rate.
+    """
 
+    #############################################################################################################################################
 
-    def __init__ (self, *args, **kwargs):
+    def __init__ ( self,
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
         
+        """
+            Constructor for the class.
+            In:
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+
         # Inherit from parent class
         super().__init__(best=min, *args, **kwargs)
 
         # Attributes
         self.model = None
 
-
+    #############################################################################################################################################
 
     @override
-    def compute (self, text_1, text_2):
+    def _compute ( self,
+                  text_ref:  str,
+                  text_pred: str
+                ) ->         float:
+
+        """
+            Function to compute the metric.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
 
         # Load the model as late as possible
         if self.model is None:
             self.model = evaluate.load("wer")
 
         # Compute the error
-        error = self.model.compute(predictions=[text_2], references=[text_1])
+        error = min(1.0, self.model.compute(predictions=[text_pred], references=[text_ref]))
         return error
 
-
+    #############################################################################################################################################
+    #############################################################################################################################################
 
 #####################################################################################################################################################
 
 class EmbeddingSimilarity (TextMetrics):
 
+    """
+        Class to compute the similarity between two texts using embeddings.
+    """
 
+    #############################################################################################################################################
 
-    def __init__ (self, model_name, *args, **kwargs):
+    def __init__ ( self,
+                   model_name: str,
+                   *args:      Optional[list[any]],
+                   **kwargs:   Optional[dict[any, any]]
+                 ) ->          None:
         
         # Inherit from parent class
         super().__init__(best=max, *args, **kwargs)
@@ -111,28 +205,153 @@ class EmbeddingSimilarity (TextMetrics):
         self.model_name = model_name
         self.model = None
 
-
+    #############################################################################################################################################
 
     @override
-    def compute (self, text_1, text_2):
-
-        # In case of empty texts, return 0
-        if text_1 == "" or text_2 == "" or "<|nospeech|>" in text_1 or "<|nospeech|>" in text_2:
-            return 0.0
+    def _compute ( self,
+                   text_ref:  str,
+                   text_pred: str
+                 ) ->         float:
+        
+        """
+            Function to compute the metric.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
 
         # Load the model as late as possible
         if self.model is None:
             self.model = lib.models.loader.get_model(self.model_name)
 
         # Compute the embeddings
-        embedding_1 = self.model.run(text_1)
-        embedding_2 = self.model.run(text_2)
+        embedding_ref = self.model.run(text_ref[:self.model.max_seq_length])
+        embedding_pred = self.model.run(text_pred[:self.model.max_seq_length])
 
         # Compute the similarity
-        similarity = float(embedding_1 @ embedding_2 / (embedding_1.norm() * embedding_2.norm()))
+        similarity = float(embedding_ref @ embedding_pred / (embedding_ref.norm() * embedding_pred.norm()))
         return similarity
 
+    #############################################################################################################################################
+    #############################################################################################################################################
 
+#####################################################################################################################################################
+
+class BLEU (TextMetrics):
+
+    """
+        Class to compute the BLEU score.
+    """
+
+    #############################################################################################################################################
+
+    def __init__ ( self,
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
+        
+        """
+            Constructor for the class.
+            In:
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+
+        # Inherit from parent class
+        super().__init__(best=max, *args, **kwargs)
+
+        # Attributes
+        self.scorer = None
+
+    #############################################################################################################################################
+
+    @override
+    def _compute ( self,
+                   text_ref:  str,
+                   text_pred: str
+                 ) ->         float:
+
+        """
+            Function to compute the metric.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
+
+        # Load the scorer as late as possible
+        if self.scorer is None:
+            self.scorer = sacrebleu.metrics.BLEU(effective_order=True)
+
+        # Compute the score
+        score = self.scorer.sentence_score(hypothesis=text_pred, references=[text_ref])
+        return score.score / 100
+
+    #############################################################################################################################################
+    #############################################################################################################################################
+
+#####################################################################################################################################################
+
+class ROUGE (TextMetrics):
+
+    """
+        Class to compute the ROUGE score.
+    """
+
+    #############################################################################################################################################
+
+    def __init__ ( self,
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
+        
+        """
+            Constructor for the class.
+            In:
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+        
+        # Inherit from parent class
+        super().__init__(best=max, *args, **kwargs)
+
+        # Attributes
+        self.scorer = None
+
+    #############################################################################################################################################
+
+    @override
+    def _compute ( self,
+                   text_ref:  str,
+                   text_pred: str
+                 ) ->         float:
+
+        """
+            Function to compute the metric.
+            In:
+                * text_ref:  The reference text.
+                * text_pred: The predicted text.
+            Out:
+                * The computed metric.
+        """
+
+        # Load the scorer as late as possible
+        if self.scorer is None:
+            self.scorer = rouge.Rouge()
+
+        # Compute the score
+        score = self.scorer.get_scores(hyps=text_pred, refs=text_ref)
+        return score[0]["rouge-l"]["f"]
+
+    #############################################################################################################################################
+    #############################################################################################################################################
 
 #####################################################################################################################################################
 ##################################################################### FUNCTIONS #####################################################################
@@ -141,7 +360,15 @@ class EmbeddingSimilarity (TextMetrics):
 def get_metric ( metric_class_name: Union[str, list[str], tuple[str]]
                ) ->                 TextMetrics:
 
-    # Metric can be passed as a tuple with arguments
+    """
+        Function to get a metric from its name.
+        In:
+            * metric_class_name: The name of the metric class.
+        Out:
+            * The metric.
+    """
+
+    # Metric can be passed as a tuple with arguments
     extra_args = []
     if type(metric_class_name) in [list, tuple]:
         metric_class_name, *extra_args = metric_class_name

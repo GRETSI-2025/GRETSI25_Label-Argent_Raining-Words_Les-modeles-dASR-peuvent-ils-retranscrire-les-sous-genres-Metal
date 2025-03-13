@@ -45,11 +45,16 @@ import lib.metrics
 ######################################################################### GO ########################################################################
 #####################################################################################################################################################
 
+# Create output directory if it does not exist
+data_directory = os.path.join(script_args().output_directory, "data")
+os.makedirs(data_directory, exist_ok=True)
+os.chmod(data_directory, 0o777)
+
 # Get the list of all files to work on
 all_files = lib.audio.list_from_dataset()
 
 # Load metrics from file
-metrics_file_path = os.path.join(script_args().output_directory, "data", "metrics.pt")
+metrics_file_path = os.path.join(data_directory, "metrics.pt")
 all_metrics = {}
 if os.path.exists(metrics_file_path):
     with open(metrics_file_path, "rb") as file:
@@ -72,7 +77,7 @@ for dataset in sorted(all_files):
 
             # Get lyrics
             actual_lyrics = lib.audio.get_lyrics(os.path.join(script_args().datasets_path, "lyrics.ods"), dataset.split(os.path.sep)[-1], file_name)
-            found_lyrics = lib.audio.get_lyrics(os.path.join(script_args().output_directory, "data", asr_model.replace(os.path.sep, "-") + ".ods"), dataset, file_name)["Lyrics"]
+            found_lyrics = lib.audio.get_lyrics(os.path.join(data_directory, asr_model.replace(os.path.sep, "-") + ".ods"), dataset, file_name)["Lyrics"]
 
             # Then group by lyrics version
             for lyrics_version in actual_lyrics:

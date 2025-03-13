@@ -38,6 +38,8 @@ import torch
 from pathlib import Path
 from typing import *
 import yt_dlp
+import soundfile
+import io
 
 # Project imports
 from lib.arguments import script_args
@@ -97,7 +99,8 @@ def get_audio_path ( dataset:                str,
 
 def load_audio ( audio_path: str,
                  resample:   Optional[int] = None,
-                 to_mono:    bool = False
+                 to_mono:    bool = False,
+                 engine:     str = "torchaudio"
                ) ->          torch.Tensor:
 
     """
@@ -106,24 +109,37 @@ def load_audio ( audio_path: str,
             * audio_path: The path to the audio file.
             * resample:   The frequency to resample the audio file to.
             * to_mono:    Whether to convert the audio file to mono.
+            * engine:     The engine to use to load the audio file.
         Out:
-            * The audio file as a tensor.
+            * The audio file as a tensor, and its sampling rate.
     """
 
-    # Get audio file
-    format = audio_path.split(".")[-1]
-    audio, sampling_rate = torchaudio.load(audio_path, format=format)
-    
-    # Resample if needed
-    if resample:
-        audio = torchaudio.functional.resample(audio, orig_freq=sampling_rate, new_freq=resample)
-    
-    # Convert to mono if needed
-    if to_mono:
-        audio = audio.mean(dim=0, keepdim=True)
+    # If using Torchaudio
+    if engine == "torchaudio":
         
-    # Return audio
-    return audio
+        # Get audio file
+        format = audio_path.split(".")[-1]
+        audio, sampling_rate = torchaudio.load(audio_path, format=format)
+
+        # Resample and convert to mono if needed
+        if resample:
+            audio = torchaudio.functional.resample(audio, orig_freq=sampling_rate, new_freq=resample)
+            sampling_rate = resample
+        if to_mono:
+            audio = audio.mean(dim=0, keepdim=True)
+        return audio, sampling_rate
+
+    # If using Soundfile
+    elif engine == "soundfile":
+
+        # Get audio file, already resampled and converted to mono if needed
+        channels = 1 if to_mono else None
+        audio, sampling_rate = soundfile.read(audio_path, samplerate=resample, channels=channels)
+        audio = torch.tensor(audio)
+        return audio, sampling_rate
+    
+    # Raise exception if the engine is not recognized
+    raise Exception(f"Engine {engine} not recognized")
 
 #####################################################################################################################################################
 
@@ -210,11 +226,6 @@ def download_audio ( url:              str,
             * None.
     """
 
-    # Create directory if it does not exist
-    target_directory = target_file_path[:target_file_path.rfind(os.path.sep)]
-    os.makedirs(target_directory, exist_ok=True)
-    os.chmod(target_directory, 0o777)
-
     # Ignore if the file already exists
     if not os.path.exists(target_file_path):
 
@@ -246,11 +257,6 @@ def extract_vocals ( source_file_path: str,
         Out:
             * None.
     """
-
-    # Create directory if it does not exist
-    target_directory = target_file_path[:target_file_path.rfind(os.path.sep)]
-    os.makedirs(target_directory, exist_ok=True)
-    os.chmod(target_directory, 0o777)
 
     # Check if the file is already in global memory to avoid reloading
     if not os.path.exists(target_file_path):

@@ -46,6 +46,11 @@ import lib.metrics
 ######################################################################### GO ########################################################################
 #####################################################################################################################################################
 
+# Create output directory if it does not exist
+figures_directory = os.path.join(script_args().output_directory, "figures")
+os.makedirs(figures_directory, exist_ok=True)
+os.chmod(figures_directory, 0o777)
+
 # Load metrics from file
 metrics_file_path = os.path.join(script_args().output_directory, "data", "metrics.pt")
 with open(metrics_file_path, "rb") as file:
@@ -65,14 +70,15 @@ for metric_name in script_args().metrics:
         for asr_model in script_args().asr_models:
             best_per_song = [metric.best(all_metrics["emvd"][file_name][asr_model][lyrics_version][metric_name] for lyrics_version in all_metrics["emvd"][file_name][asr_model]) for file_name in songs_by_style[style]]
             mean_value = torch.mean(torch.tensor(best_per_song)).item()
+            print(f"Style: {style}, Model: {asr_model}, Metric: {metric_name}, Value: {mean_value}")
             data.append({"Style": style, "Model": asr_model, "Metric": metric_name, "Value": mean_value})
     
     # Build polar figure
     fig = px.line_polar(pandas.DataFrame(data), r="Value", theta="Style", color="Model", line_close=True)
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True)
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 1])), showlegend=True, legend=dict(yanchor="bottom", xanchor="center", x=1))
 
     # Save figure
-    figure_file_path = os.path.join(script_args().output_directory, "figures", f"emvd - {metric_name}.png")
+    figure_file_path = os.path.join(figures_directory, f"emvd - {metric_name}.png")
     fig.write_image(figure_file_path)
     os.chmod(figure_file_path, 0o777)
 

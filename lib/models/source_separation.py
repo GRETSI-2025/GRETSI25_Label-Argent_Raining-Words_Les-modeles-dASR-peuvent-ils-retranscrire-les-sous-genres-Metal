@@ -122,7 +122,8 @@ class Demucs (lib.models.base.ManualDlModel):
         demucs.separate.main(["--two-stems", instrument, "--name", self.model, "--repo", self.model_path, "-o", "separated", source_file_path])
 
         # Reorganize the output
-        source_file_name = source_file_path.split(os.path.sep)[-1].split(".")[0]
+        source_file_name = source_file_path.split(os.path.sep)[-1]
+        source_file_name = source_file_name[:source_file_name.rfind(".")]
         os.rename(os.path.join("separated", self.model, source_file_name, f"{instrument}.wav"), target_file_path)
         shutil.rmtree("separated", ignore_errors=True)
 

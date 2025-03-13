@@ -45,6 +45,11 @@ import lib.models.loader
 ######################################################################### GO ########################################################################
 #####################################################################################################################################################
 
+# Create output directory if it does not exist
+data_directory = os.path.join(script_args().output_directory, "data")
+os.makedirs(data_directory, exist_ok=True)
+os.chmod(data_directory, 0o777)
+
 # Get the list of all files to work on
 all_files = lib.audio.list_from_dataset()
 
@@ -52,7 +57,7 @@ all_files = lib.audio.list_from_dataset()
 for asr_model in script_args().asr_models:
 
     # Load existing lyrics from file
-    lyrics_file_path = os.path.join(script_args().output_directory, "data", asr_model.replace(os.path.sep, "-") + ".ods")
+    lyrics_file_path = os.path.join(data_directory, asr_model.replace(os.path.sep, "-") + ".ods")
     if not os.path.exists(lyrics_file_path):
         all_lyrics = {}
     else:
@@ -75,7 +80,7 @@ for asr_model in script_args().asr_models:
                 transcription = model.run(lib.audio.get_audio_path(dataset, file_name))
                 all_lyrics[dataset_sheet]["File"].append(file_name)
                 all_lyrics[dataset_sheet]["Lyrics"].append(transcription)
-                print(f"Transcription: {transcription}", file=sys.stderr, flush=True)
+                print(f"{file_name}: {transcription}", file=sys.stdout, flush=True)
             
     # Save results to file
     with pandas.ExcelWriter(lyrics_file_path, engine="odf") as writer:

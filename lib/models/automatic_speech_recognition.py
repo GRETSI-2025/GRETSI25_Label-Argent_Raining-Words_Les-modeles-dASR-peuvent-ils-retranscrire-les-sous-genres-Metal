@@ -34,7 +34,7 @@
 import os
 from typing import *
 import torch
-from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, pipeline
+from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, AutoModelForCausalLM, AutoProcessor, GenerationConfig, pipeline
 from nemo.collections.asr.models import EncDecMultiTaskModel
 import logging
 
@@ -255,7 +255,7 @@ class Canary_1B (lib.models.base.NvidiaNemoModel):
         """
 
         # Needs data to be mono and resampled at 16kHz
-        audio = lib.audio.load_audio(audio_path, 16000, True)
+        audio, sampling_rate = lib.audio.load_audio(audio_path, 16000, True)
 
         # Transcribe
         return self.model.transcribe(audio.squeeze(0), source_lang=language, target_lang=language, task="asr", pnc="no")[0]
@@ -328,8 +328,7 @@ class Wav2vec2_Large_960h_Lv60_Self (lib.models.base.HuggingFaceModel):
         """
 
         # Needs data to be mono and resampled at 16kHz
-        sampling_rate = 16000
-        audio = lib.audio.load_audio(audio_path, sampling_rate, True)
+        audio, sampling_rate = lib.audio.load_audio(audio_path, 16000, True)
 
         # Transcribe
         input_values = self.processor(audio, return_tensors="pt", padding="longest", sampling_rate=sampling_rate).input_values.squeeze(0)
@@ -337,6 +336,91 @@ class Wav2vec2_Large_960h_Lv60_Self (lib.models.base.HuggingFaceModel):
             logits = self.model(input_values).logits
         predicted_ids = torch.argmax(logits, dim=-1)
         return self.processor.batch_decode(predicted_ids)[0]
+
+    #############################################################################################################################################
+    #############################################################################################################################################
+
+#####################################################################################################################################################
+
+class Phi_4_Multimodal_Instruct (lib.models.base.HuggingFaceModel):
+
+    """
+        Class to perform automatic speech recognition using the Phi 4 Multimodal Instruct model.
+    """
+
+    #############################################################################################################################################
+
+    def __init__ ( self,
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
+
+        """
+            Constructor for the class.
+            In:
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+
+        # Inherit from parent class
+        super().__init__(model_id="microsoft/Phi-4-multimodal-instruct", *args, **kwargs)
+
+        # Attributes
+        self.processor = None
+        self.model = None
+        self.config = None
+
+    #############################################################################################################################################
+
+    @override
+    def _setup ( self,
+               ) -> None:
+        
+        """
+            Method to setup the model.
+            In:
+                * None.
+            Out:
+                * None.
+        """
+        
+        # https://huggingface.co/microsoft/Phi-4-multimodal-instruct
+        self.processor = AutoProcessor.from_pretrained(os.path.join(script_args().models_directory, self.model_id), trust_remote_code=True)
+        self.model = AutoModelForCausalLM.from_pretrained(os.path.join(script_args().models_directory, self.model_id), device_map="cuda", torch_dtype="auto", trust_remote_code=True, _attn_implementation="flash_attention_2").cuda()
+        self.config = GenerationConfig.from_pretrained(os.path.join(script_args().models_directory, self.model_id))
+
+    #############################################################################################################################################
+
+    @override
+    def _apply ( self,
+                 audio_path: str,
+               ) ->          str:
+
+        """
+            Method to apply the model to some data.
+            In:
+                * audio_path: The path to the audio file.
+            Out:
+                * The text transcription of the audio.
+        """
+
+        # Load audio
+        audio, sampling_rate = lib.audio.load_audio(audio_path, engine="soundfile")
+
+        # Define prompt
+        user_prompt = "<|user|>"
+        assistant_prompt = "<|assistant|>"
+        prompt_suffix = "<|end|>"
+        asr_prompt = "Transcribe the lyrics in the audio to text. Do not write anything else."
+        prompt = f"{user_prompt}<|audio_1|>{asr_prompt}{prompt_suffix}{assistant_prompt}"
+
+        # Transcribe
+        inputs = self.processor(text=prompt, audios=[(audio, sampling_rate)], return_tensors="pt").to("cuda:0")
+        generate_ids = self.model.generate(**inputs, max_new_tokens=1000, generation_config=self.config)
+        generate_ids = generate_ids[:, inputs["input_ids"].shape[1]:]
+        return self.processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
 
     #############################################################################################################################################
     #############################################################################################################################################
