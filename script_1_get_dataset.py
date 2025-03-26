@@ -126,7 +126,7 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=j1cTZIYQrs0", "Possessed", "Fallen Angel"),
         ("https://www.youtube.com/watch?v=ev4PS7Fk6j8", "Ulcerate", "Extinguished Light")
     ],
-    "deathcore": [
+    "deathcore_metalcore": [
         ("https://www.youtube.com/watch?v=S1jpivGF2xk", "Acrania", "Disillusion in a Discordant System"),
         ("https://www.youtube.com/watch?v=RIiaP4zsH6c", "AngelMaker", "What I Would Give"),
         ("https://www.youtube.com/watch?v=-nl_ttX031Y", "August Burns Red", "Composure"),
@@ -207,7 +207,7 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=wtT-1M4WfeU", "Veil", "Mater Maternis"),
         ("https://www.youtube.com/watch?v=BIkNLwmpMV0", "Xasthur", "Screaming at Forgotten Fears")
     ],
-    "goregrind": [
+    "goregrind_porngrind": [
         ("https://www.youtube.com/watch?v=zxgL4ZPPoPY", "Agathocles", "Splattered Brains"),
         ("https://www.youtube.com/watch?v=bw8xvJiqux4", "Blasted Pancreas", "Lymphangiosarcoma"),
         ("https://www.youtube.com/watch?v=WP2TWpv5NxY", "Butcher ABC", "Maximum Rotting Corpse"),
@@ -233,6 +233,33 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=TtMrNod44_8", "Septage", "Intolerant Spree of Infesting Forms (Septic Worship)"),
         ("https://www.youtube.com/watch?v=uLLQyQym8m0", "The County Medical Examiners", "Casper's Dictum"),
         ("https://www.youtube.com/watch?v=Xy39_E68EmY", "Torsofuck", "Retarded Anal Whore")
+    ],
+    "symphonic_gothic": [
+        ("https://www.youtube.com/watch?v=EpNOjlPraSs", "After Forever", "Leaden Legacy (The Embrace That Smothers - Part I)"),
+        ("https://www.youtube.com/watch?v=jbigMRL9VMI", "Amberian Dawn", "Valkyries"),
+        ("https://www.youtube.com/watch?v=TEYCWvuYq6Y", "Angellore", "Blood for Lavinia"),
+        ("https://www.youtube.com/watch?v=jlZSgH2583Q", "Angtoria", "Do You See Me Now?"),
+        ("https://www.youtube.com/watch?v=VUaUMUT1h4o", "Beyond the Black", "Hallelujah"),
+        ("https://www.youtube.com/watch?v=bYznBldN7OY", "Delain", "We Are the Others"),
+        ("https://www.youtube.com/watch?v=rtjGjIgnltY", "Elis", "Perfect Love"),
+        ("https://www.youtube.com/watch?v=3q0w5dJt9Hc", "Epica", "Sensorium"),
+        ("https://www.youtube.com/watch?v=BA9qVlrkQKk", "Edenbridge", "Cheyenne Spirit"),
+        ("https://www.youtube.com/watch?v=3gliWhtxbyE", "Ex Libris", "Love Is Thy Sin"),
+        ("https://www.youtube.com/watch?v=tjwfI0fZHJA", "Exit Eden", "Hold Back Your Fear"),
+        ("https://www.youtube.com/watch?v=mfNXdBT0HW0", "Imperia", "Fata Morgana"),
+        ("https://www.youtube.com/watch?v=35eio8imriw", "Kamelot", "Forever"),
+        ("https://www.youtube.com/watch?v=pzK44v5PWMg", "Lacuna Coil", "Falling Again"),
+        ("https://www.youtube.com/watch?v=E84gPHP8g5Q", "Leaves' Eyes", "Through our Veins"),
+        ("https://www.youtube.com/watch?v=Nj66U769jHY", "Nemesea", "Lucifer"),
+        ("https://www.youtube.com/watch?v=n1G5WiMoRjw", "Nightwish", "The Phantom of the Opera"),
+        ("https://www.youtube.com/watch?v=nDbw6MEOpmI", "Pythia", "Ancient Soul"),
+        ("https://www.youtube.com/watch?v=mP0IWOW3kO4", "ReVamp", "Sweet Curse"),
+        ("https://www.youtube.com/watch?v=Otk_X_LckJw", "Sirenia", "My Mind's Eye"),
+        ("https://www.youtube.com/watch?v=CwUxkzk0Slg", "Theatre of Tragedy", "Bacchante"),
+        ("https://www.youtube.com/watch?v=jTdotKrKSV8", "Tristania", "My Lost Lenore"),
+        ("https://www.youtube.com/watch?v=ulQIXCSCJeo", "UnSun", "A Single Touch"),
+        ("https://www.youtube.com/watch?v=_yKiqBO9ZaM", "Within Temptation", "Ice Queen"),
+        ("https://www.youtube.com/watch?v=kkjunJnObho", "Xandria", "Ravenheart")
     ],
     "punk_hardcore": [
         ("https://www.youtube.com/watch?v=_zvJ39bhI0Y", "Adolescents", "No Way"),
@@ -315,7 +342,7 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=1eJZGTedU6o", "Wintersun", "Beyond the Dark Sun"),
         ("https://www.youtube.com/watch?v=gdqMlknKYV8", "Wolfheart", "Ghost of Karelia")
     ],
-    "grindcore_powerviolence": [
+    "grindcore_deathgrind_powerviolence": [
         ("https://www.youtube.com/watch?v=yyy65SEdj_0", "Agoraphobic Nosebleed", "Repercussions in the Life of an Opportunistic, Pseudo Intellectual Jackass"),
         ("https://www.youtube.com/watch?v=OJqAOV2Y198", "Anal Cunt", "Crankin’ My Bands Demo on a Box at the Beach"),
         ("https://www.youtube.com/watch?v=3s1n7eYQMr8", "Antigama", "Underterminate"),

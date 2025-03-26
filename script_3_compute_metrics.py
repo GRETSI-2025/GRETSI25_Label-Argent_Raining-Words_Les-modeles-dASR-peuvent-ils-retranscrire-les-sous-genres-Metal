@@ -94,10 +94,10 @@ for dataset in sorted(all_files):
                         metric = lib.metrics.get_metric(metric_name)
                         all_metrics[dataset][file_name][asr_model][lyrics_version][metric_name] = metric.compute(actual_lyrics[lyrics_version], found_lyrics)
 
-# Save results to file
-with open(metrics_file_path, "wb") as file:
-    pickle.dump(all_metrics, file)
-os.chmod(metrics_file_path, 0o777)
+            # Save results to file
+            with open(metrics_file_path, "wb") as file:
+                pickle.dump(all_metrics, file)
+            os.chmod(metrics_file_path, 0o777)
 
 # Print results
 for dataset in sorted(all_files):
