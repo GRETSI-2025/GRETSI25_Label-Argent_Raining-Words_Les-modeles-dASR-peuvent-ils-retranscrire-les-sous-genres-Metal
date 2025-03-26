@@ -71,7 +71,8 @@ for dataset in sorted(all_files):
             all_metrics[dataset][file_name] = {}
 
         # Then group by ASR model
-        for asr_model in script_args().asr_models:
+        asr_models = script_args().asr_models if dataset.startswith("emvd") else script_args().asr_models_songs
+        for asr_model in asr_models:
             if asr_model not in all_metrics[dataset][file_name]:
                 all_metrics[dataset][file_name][asr_model] = {}
 

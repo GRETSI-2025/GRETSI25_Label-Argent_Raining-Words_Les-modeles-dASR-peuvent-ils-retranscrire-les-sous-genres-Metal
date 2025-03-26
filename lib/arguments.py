@@ -76,15 +76,22 @@ def script_args ():
                         help="List of models to use for source separation",
                         default=[("Demucs", "mdx_extra")])
     
-    parser.add_argument("--asr_models",
+    parser.add_argument("--asr_models_emvd",
                         type=list,
-                        help="List of models to evaluate",
+                        help="List of models to evaluate on the EMVD dataset",
                         default=["Whisper_Large_V3",
                                  "Whisper_Large_V2",
                                  "Phi_4_Multimodal_Instruct",
                                  "Canary_1B",
                                  "Wav2vec2_Large_960h_Lv60_Self"])
-    
+
+    parser.add_argument("--asr_models_songs",
+                        type=list,
+                        help="List of models to evaluate on the songs and source-separated datasets",
+                        default=["Whisper_Large_V3",
+                                 "Whisper_Large_V2",
+                                 "Phi_4_Multimodal_Instruct"])
+
     parser.add_argument("--metrics",
                         type=list,
                         help="Metrics or models used for computing similarity/error",

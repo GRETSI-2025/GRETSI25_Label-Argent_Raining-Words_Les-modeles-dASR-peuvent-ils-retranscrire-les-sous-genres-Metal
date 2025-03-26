@@ -39,7 +39,6 @@ from pathlib import Path
 from typing import *
 import yt_dlp
 import soundfile
-import io
 
 # Project imports
 from lib.arguments import script_args
@@ -69,7 +68,7 @@ def list_from_dataset ( dataset: str = None
     actual_datasets = list(set(file_name[:file_name.rfind(os.path.sep)] for file_name in file_names))
 
     # List files per dataset
-    return {s: [file_name[file_name.rfind(os.path.sep)+1:file_name.rfind(".")] for file_name in file_names if file_name.startswith(s)] for s in actual_datasets}
+    return {s: [file_name[file_name.rfind(os.path.sep)+1:file_name.rfind(".")] for file_name in file_names if file_name[:file_name.rfind(os.path.sep)] == s] for s in actual_datasets}
     
 #####################################################################################################################################################
 
@@ -161,7 +160,10 @@ def normalize_lyrics ( lyrics: str
     # Remove extra spaces
     words = lyrics.split()
 
-    # Remove simple artifacts such as having twice the same word consecutively
+    # Remove words too long to be actual words
+    words = [word for word in words if len(word) < 25]
+
+    # Remove duplicate words
     lyrics = [words[i] for i in range(len(words)) if i == 0 or words[i] != words[i-1]]
     lyrics = " ".join(lyrics)
     return lyrics
@@ -205,7 +207,8 @@ def get_lyrics ( lyrics_file:            str,
     
     # Get row containing sheet name
     sheet_name = dataset.replace(os.path.sep, "___")
-    row = file[sheet_name].loc[file[sheet_name]["File"] == file_name_no_extension]
+    row_key = file_name_no_extension.replace("–", "-").lower()
+    row = file[sheet_name].loc[file[sheet_name]["File"].str.replace("–", "-").str.lower() == row_key]
     if not row.empty:
         return {key: normalize_lyrics(row[key].values[0]) for key in row.keys() if key.startswith("Lyrics")}
 

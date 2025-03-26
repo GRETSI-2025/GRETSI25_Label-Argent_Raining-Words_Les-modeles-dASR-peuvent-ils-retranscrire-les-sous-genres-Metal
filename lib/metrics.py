@@ -97,10 +97,10 @@ class TextMetrics (abc.ABC):
         or "<|nospeech|>" in text_ref or "<|nospeech|>" in text_pred \
         or "lyrics are not provided" in text_ref or "lyrics are not provided" in text_pred:
             return 0.0 if self.best == max else 1.0
-        
+
         # Compute the metric
         return self._compute(text_ref, text_pred)
-    
+
     #############################################################################################################################################
 
     @abc.abstractmethod
@@ -138,7 +138,7 @@ class WER (TextMetrics):
                    *args:    Optional[list[any]],
                    **kwargs: Optional[dict[any, any]]
                  ) ->        None:
-        
+
         """
             Constructor for the class.
             In:
@@ -197,7 +197,7 @@ class EmbeddingSimilarity (TextMetrics):
                    *args:      Optional[list[any]],
                    **kwargs:   Optional[dict[any, any]]
                  ) ->          None:
-        
+
         # Inherit from parent class
         super().__init__(best=max, *args, **kwargs)
 
@@ -212,7 +212,7 @@ class EmbeddingSimilarity (TextMetrics):
                    text_ref:  str,
                    text_pred: str
                  ) ->         float:
-        
+
         """
             Function to compute the metric.
             In:
@@ -251,7 +251,7 @@ class BLEU (TextMetrics):
                    *args:    Optional[list[any]],
                    **kwargs: Optional[dict[any, any]]
                  ) ->        None:
-        
+
         """
             Constructor for the class.
             In:
@@ -309,7 +309,7 @@ class ROUGE (TextMetrics):
                    *args:    Optional[list[any]],
                    **kwargs: Optional[dict[any, any]]
                  ) ->        None:
-        
+
         """
             Constructor for the class.
             In:
@@ -318,7 +318,7 @@ class ROUGE (TextMetrics):
             Out:
                 * A new instance of the class.
         """
-        
+
         # Inherit from parent class
         super().__init__(best=max, *args, **kwargs)
 
@@ -372,10 +372,10 @@ def get_metric ( metric_class_name: Union[str, list[str], tuple[str]]
     extra_args = []
     if type(metric_class_name) in [list, tuple]:
         metric_class_name, *extra_args = metric_class_name
-    
+
     # Load the metric
     metric_class = getattr(sys.modules[__name__], metric_class_name)
     return metric_class(*extra_args)
-    
+
 #####################################################################################################################################################
 #####################################################################################################################################################

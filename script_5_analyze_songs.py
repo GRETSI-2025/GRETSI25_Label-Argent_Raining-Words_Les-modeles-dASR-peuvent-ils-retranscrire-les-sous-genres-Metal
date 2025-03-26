@@ -51,10 +51,6 @@ figures_directory = os.path.join(script_args().output_directory, "figures")
 os.makedirs(figures_directory, exist_ok=True)
 os.chmod(figures_directory, 0o777)
 
-# Only consider a subset of models
-use_models_subset = True
-asr_models = ["Whisper_Large_V3"] if use_models_subset else script_args().asr_models
-
 # Produce a set of figures per dataset
 datasets = [f for f in os.listdir(os.path.join(script_args().datasets_path, "audio")) if f != "emvd"]
 for dataset in datasets:
@@ -73,9 +69,9 @@ for dataset in datasets:
         # Create dataframe for the figure
         metric = lib.metrics.get_metric(metric_name)
         data = []
-        for sub_dataset in all_file_paths:
+        for sub_dataset in sorted(all_file_paths):
             style = sub_dataset.split(os.path.sep)[-1]
-            for asr_model in asr_models:
+            for asr_model in script_args().asr_models_songs:
                 best_per_song = [metric.best(all_metrics[sub_dataset][file_name][asr_model][lyrics_version][metric_name] for lyrics_version in all_metrics[sub_dataset][file_name][asr_model]) for file_name in all_file_paths[sub_dataset]]
                 mean_value = torch.mean(torch.tensor(best_per_song)).item()
                 data.append({"Style": style, "Model": asr_model, "Metric": metric_name, "Value": mean_value})

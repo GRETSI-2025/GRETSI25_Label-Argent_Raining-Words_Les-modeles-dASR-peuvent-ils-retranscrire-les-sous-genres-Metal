@@ -54,9 +54,10 @@ os.chmod(data_directory, 0o777)
 all_files = lib.audio.list_from_dataset()
 
 # Extract lyrics from all audio files using the models
-for asr_model in script_args().asr_models:
+for asr_model in set(script_args().asr_models_emvd + script_args().asr_models_songs):
 
     # Load existing lyrics from file
+    print(f"Model: \"{asr_model}\"", file=sys.stdout, flush=True)
     lyrics_file_path = os.path.join(data_directory, asr_model.replace(os.path.sep, "-") + ".ods")
     if not os.path.exists(lyrics_file_path):
         all_lyrics = {}
@@ -66,6 +67,10 @@ for asr_model in script_args().asr_models:
 
     # One sheet per dataset
     for dataset in all_files:
+        if (dataset.startswith("emvd") and asr_model not in script_args().asr_models_emvd) \
+        or ((not dataset.startswith("emvd")) and asr_model not in script_args().asr_models_songs):
+            continue
+        print(f"    Dataset: \"{dataset}\"", file=sys.stdout, flush=True)
         dataset_sheet = dataset.replace(os.path.sep, "___")
         if dataset_sheet not in all_lyrics:
             all_lyrics[dataset_sheet] = {"File": [], "Lyrics": []}
@@ -75,18 +80,19 @@ for asr_model in script_args().asr_models:
             if file_name not in all_lyrics[dataset_sheet]["File"]:
 
                 # Go through ASR pipeline
-                print(f"Extracting lyrics for \"{file_name}\" with model \"{asr_model}\"", file=sys.stderr, flush=True)
+                print(f"        File: \"{file_name}\"", file=sys.stdout, flush=True)
                 model = lib.models.loader.get_model(asr_model)
                 transcription = model.run(lib.audio.get_audio_path(dataset, file_name))
                 all_lyrics[dataset_sheet]["File"].append(file_name)
                 all_lyrics[dataset_sheet]["Lyrics"].append(transcription)
-                print(f"{file_name}: {transcription}", file=sys.stdout, flush=True)
+                print(f"            {transcription}", file=sys.stdout, flush=True)
             
     # Save results to file
-    with pandas.ExcelWriter(lyrics_file_path, engine="odf") as writer:
-        for sheet_name, sheet in all_lyrics.items():
-            pandas.DataFrame(sheet).to_excel(writer, sheet_name=sheet_name, index=False)
-    os.chmod(lyrics_file_path, 0o777)
+    if len(all_lyrics) > 0:
+        with pandas.ExcelWriter(lyrics_file_path, engine="odf") as writer:
+            for sheet_name, sheet in all_lyrics.items():
+                pandas.DataFrame(sheet).to_excel(writer, sheet_name=sheet_name, index=False)
+        os.chmod(lyrics_file_path, 0o777)
     
 #####################################################################################################################################################
 #####################################################################################################################################################
