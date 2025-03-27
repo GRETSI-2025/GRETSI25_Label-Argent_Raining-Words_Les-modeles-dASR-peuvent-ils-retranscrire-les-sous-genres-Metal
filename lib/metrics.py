@@ -95,7 +95,7 @@ class TextMetrics (abc.ABC):
         # In case of empty texts, return the worst score
         if text_ref == "" or text_pred == "" \
         or "<|nospeech|>" in text_ref or "<|nospeech|>" in text_pred \
-        or "lyrics are not provided" in text_ref or "lyrics are not provided" in text_pred:
+        or "not provided" in text_ref or "not provided" in text_pred:
             return 0.0 if self.best == max else 1.0
 
         # Compute the metric

@@ -71,7 +71,7 @@ for dataset in sorted(all_files):
             all_metrics[dataset][file_name] = {}
 
         # Then group by ASR model
-        asr_models = script_args().asr_models if dataset.startswith("emvd") else script_args().asr_models_songs
+        asr_models = script_args().asr_models_emvd if dataset.startswith("emvd") else script_args().asr_models_songs
         for asr_model in asr_models:
             if asr_model not in all_metrics[dataset][file_name]:
                 all_metrics[dataset][file_name][asr_model] = {}
@@ -104,7 +104,7 @@ for dataset in sorted(all_files):
     print(f"[DATASET] {dataset}", file=sys.stdout, flush=True)
     for file_name in sorted(all_files[dataset]):
         print(f"|__ [FILE] {file_name}", file=sys.stdout, flush=True)
-        for asr_model in script_args().asr_models:
+        for asr_model in sorted(all_metrics[dataset][file_name]):
             print(f"|   |__ [MODEL] {asr_model}", file=sys.stdout, flush=True)
             for metric_name in script_args().metrics:
                 metric = lib.metrics.get_metric(metric_name)
