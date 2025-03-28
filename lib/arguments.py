@@ -54,22 +54,22 @@ def script_args ():
     parser.add_argument("--datasets_path",
                         type=str,
                         help="Path to the dataset",
-                        default="/Brain/public/datasets/metal/data")
+                        default="./data")
     
     parser.add_argument("--output_directory",
                         type=str,
                         help="Path to the output directory",
-                        default="/Brain/public/datasets/metal/output")
+                        default="./output")
     
     parser.add_argument("--models_directory",
                         type=str,
                         help="Path to where models are downloaded",
-                        default="/Brain/public/models")
+                        default="~/models")
 
     parser.add_argument("--hf_key_path",
                         type=str,
                         help="Path to the Hugging Face token file",
-                        default=f"/Brain/private/{os.environ["LOGNAME"]}/misc/hugging_face.key")
+                        default=f"~/hugging_face.key")
 
     parser.add_argument("--source_separation_models",
                         type=list,
