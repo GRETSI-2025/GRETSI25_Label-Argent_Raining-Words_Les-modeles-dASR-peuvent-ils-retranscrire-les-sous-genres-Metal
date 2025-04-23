@@ -283,7 +283,9 @@ In addition, all scripts can be run in a single command using the `script_run_al
 - `--output directory`: Path to the output directory.
 - `--models_directory`: Path to where models are downloaded.
 - `--hf_key_path`: Path to a file containing your Hugging Face token.
-- `--source_separation_models`: List of models to use for source separation (default: `[("Demucs", "mdx_extra")]`).
-- `--asr_models_emvd`: List of models to evaluate on the EMVD dataset (default: `["Whisper_Large_V3", "Whisper_Large_V2", "Phi_4_Multimodal_Instruct", "Canary_1B", "Wav2vec2_Large_960h_Lv60_Self"]`).
-- `--asr_models_songs`: List of models to evaluate on the songs and source-separated datasets (default: `["Whisper_Large_V3", "Whisper_Large_V2", "Phi_4_Multimodal_Instruct"]`). 
-- `--metrics`: List of metrics to compute (default: `["WER", "BLEU", "ROUGE", ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"), ("EmbeddingSimilarity", "All_MiniLM_L6_V2"), ("EmbeddingSimilarity", "All_MPNet_Base_V2")]`).
+- `--source_separation_models`: List of models to use for source separation (default: `[("Demucs", "mdx_extra")]`)*.
+- `--asr_models_emvd`: List of models to evaluate on the EMVD dataset (default: `["Whisper_Large_V3", "Whisper_Large_V2", "Phi_4_Multimodal_Instruct", "Canary_1B", "Wav2vec2_Large_960h_Lv60_Self"]`)*.
+- `--asr_models_songs`: List of models to evaluate on the songs and source-separated datasets (default: `["Whisper_Large_V3", "Whisper_Large_V2", "Phi_4_Multimodal_Instruct"]`)*. 
+- `--metrics`: List of metrics to compute (default: `["WER", "BLEU", "ROUGE", ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"), ("EmbeddingSimilarity", "All_MiniLM_L6_V2"), ("EmbeddingSimilarity", "All_MPNet_Base_V2")]`)*.
+
+**Note (*):** Values in those lists should be the name of the class in `lib/models/xxx.py` or a tuple `(model name, model arguments)` if needed.
