@@ -64,7 +64,7 @@ def script_args ():
     parser.add_argument("--models_directory",
                         type=str,
                         help="Path to where models are downloaded",
-                        default="~/models")
+                        default="./models")
 
     parser.add_argument("--hf_key_path",
                         type=str,
