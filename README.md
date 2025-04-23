@@ -271,6 +271,9 @@ python3 <script.py> [<parameters>]
 
 In addition, all scripts can be run in a single command using the `script_run_all.py` script.
 
+Results will be saved in the `output_directory` specified in the command line.
+The present repository contains an `output` folder with the results of the paper, which can be used to compare with your own results.
+
 ### Parameters
 
 - `--dataset_path`: Path to the dataset directory.
