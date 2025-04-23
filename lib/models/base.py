@@ -36,6 +36,7 @@ import os
 import sys
 from typing import *
 import huggingface_hub
+import urllib.request
 
 # Project imports
 from lib.arguments import script_args
@@ -325,6 +326,62 @@ class ManualDlModel (BaseModel, abc.ABC):
 
         # Model needs to be downloaded manually and put to the right place
         raise Exception(f"Cannnot download model {self.model_id} automatically. Please download it manually and put it in directory {self.model_path}.")
+
+    #############################################################################################################################################
+    #############################################################################################################################################
+
+#####################################################################################################################################################
+
+class URLDlModel (BaseModel, abc.ABC):
+
+    """
+        This class describes a model that needs to be downloaded from a given URL.
+        It is meant to be inherited by other classes.
+    """
+
+    #############################################################################################################################################
+
+    def __init__ ( self,
+                   url:      str,
+                   *args:    Optional[list[any]],
+                   **kwargs: Optional[dict[any, any]]
+                 ) ->        None:
+
+        """
+            Constructor for the class.
+            In:
+                * url:    The URL to download the model from.
+                * args:   Extra arguments.
+                * kwargs: Extra keyword arguments.
+            Out:
+                * A new instance of the class.
+        """
+
+        # Inherit from parent class
+        super().__init__(*args, **kwargs)
+
+        # Attributes
+        self.url = url
+    
+    #############################################################################################################################################
+
+    @override
+    def _download ( self,
+                  ) -> None:
+
+        """
+            Method to download the model.
+            In:
+                * None.
+            Out:
+                * None.
+        """
+
+        # Download the model
+        print(f"Downloading model {self.model_id} to {self.model_path}", file=sys.stderr, flush=True)
+        os.makedirs(self.model_path, exist_ok=True)
+        local_file_name = os.path.join(self.model_path, self.url.split("/")[-1])
+        urllib.request.urlretrieve(self.url, local_file_name)
 
     #############################################################################################################################################
     #############################################################################################################################################

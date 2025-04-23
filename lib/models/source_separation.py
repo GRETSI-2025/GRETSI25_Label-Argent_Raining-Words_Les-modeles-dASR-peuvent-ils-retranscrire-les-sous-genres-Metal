@@ -46,7 +46,7 @@ import lib.audio
 ###################################################################### CLASSES ######################################################################
 #####################################################################################################################################################
 
-class Demucs (lib.models.base.ManualDlModel):
+class Demucs (lib.models.base.URLDlModel):
 
     """
         Class to perform source separation using the Demucs model.
@@ -70,8 +70,13 @@ class Demucs (lib.models.base.ManualDlModel):
                 * A new instance of the class.
         """
 
+        # URLs of the versions
+        urls = {"mdx_extra": "https://huggingface.co/Politrees/UVR_resources/resolve/2a869610bcd09b95da793870049c26ae9492a57e/Demucs_models/e51eebcc-c1b80bdd.th"}
+        if version not in urls:
+            raise ValueError(f"Invalid version: {version}. Available versions are: {list(urls.keys())}")
+
         # Inherit from parent class
-        super().__init__(model_id=f"demucs/{version}", *args, **kwargs)
+        super().__init__(model_id=f"demucs/mdx_extra", url=urls[version], *args, **kwargs)
 
         # Attributes
         self.version = version
