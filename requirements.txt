@@ -7,3 +7,5 @@ evaluate
 rouge
 plotly
 kaleido
+torchvision
+backoff

@@ -37,6 +37,7 @@ import torch
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC, AutoModelForCausalLM, AutoProcessor, GenerationConfig, pipeline
 from nemo.collections.asr.models import EncDecMultiTaskModel
 import logging
+import sys
 
 # Project imports
 from lib.arguments import script_args
@@ -258,7 +259,7 @@ class Canary_1B (lib.models.base.NvidiaNemoModel):
         audio, sampling_rate = lib.audio.load_audio(audio_path, 16000, True)
 
         # Transcribe
-        return self.model.transcribe(audio.squeeze(0), source_lang=language, target_lang=language, task="asr", pnc="no")[0]
+        return self.model.transcribe(audio.squeeze(0), source_lang=language, target_lang=language, task="asr", pnc="no")[0].text
 
     #############################################################################################################################################
     #############################################################################################################################################
@@ -386,9 +387,18 @@ class Phi_4_Multimodal_Instruct (lib.models.base.HuggingFaceModel):
                 * None.
         """
         
+        # Use flash attention if available
+        attn = None
+        try:
+            import flash_attn
+            attn = "flash_attention_2"
+            print("Using flash attention.", file=sys.stderr, flush=True)
+        except ImportError:
+            print("Flash attention not available, using default attention implementation.", file=sys.stderr, flush=True)
+
         # https://huggingface.co/microsoft/Phi-4-multimodal-instruct
         self.processor = AutoProcessor.from_pretrained(os.path.join(script_args().models_directory, self.model_id), trust_remote_code=True)
-        self.model = AutoModelForCausalLM.from_pretrained(os.path.join(script_args().models_directory, self.model_id), device_map="cuda", torch_dtype="auto", trust_remote_code=True, _attn_implementation="flash_attention_2").cuda()
+        self.model = AutoModelForCausalLM.from_pretrained(os.path.join(script_args().models_directory, self.model_id), device_map="cuda", torch_dtype="auto", trust_remote_code=True, _attn_implementation=attn).cuda()
         self.config = GenerationConfig.from_pretrained(os.path.join(script_args().models_directory, self.model_id))
 
     #############################################################################################################################################

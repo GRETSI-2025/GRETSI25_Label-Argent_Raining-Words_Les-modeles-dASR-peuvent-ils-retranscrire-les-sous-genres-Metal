@@ -36,7 +36,6 @@ import os
 import sys
 from typing import *
 import huggingface_hub
-from nemo.collections.asr.models import EncDecMultiTaskModel
 
 # Project imports
 from lib.arguments import script_args
