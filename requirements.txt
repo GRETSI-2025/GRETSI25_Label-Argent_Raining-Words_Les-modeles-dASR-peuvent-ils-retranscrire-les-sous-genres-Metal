@@ -1,0 +1,9 @@
+nemo_toolkit[asr]
+torchaudio
+yt-dlp
+demucs
+odfpy
+evaluate
+rouge
+plotly
+kaleido
