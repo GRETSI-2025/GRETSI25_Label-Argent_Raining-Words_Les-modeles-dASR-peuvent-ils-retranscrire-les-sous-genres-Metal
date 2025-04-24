@@ -232,7 +232,7 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=JQZtcCj8LvI", "Regurgitate", "Carnivorous Erection"),
         ("https://www.youtube.com/watch?v=TtMrNod44_8", "Septage", "Intolerant Spree of Infesting Forms (Septic Worship)"),
         ("https://www.youtube.com/watch?v=uLLQyQym8m0", "The County Medical Examiners", "Casper's Dictum"),
-        ("https://www.youtube.com/watch?v=Xy39_E68EmY", "Torsofuck", "Retarded Anal Whore")
+        #("https://www.youtube.com/watch?v=Xy39_E68EmY", "Torsofuck", "Retarded Anal Whore")    # 2025-04-24: This video has been removed from Youtube
     ],
     "symphonic_gothic": [
         ("https://www.youtube.com/watch?v=EpNOjlPraSs", "After Forever", "Leaden Legacy (The Embrace That Smothers - Part I)"),
@@ -292,7 +292,7 @@ dataset_urls = {
         ("https://www.youtube.com/watch?v=Y1e1JOFcrNQ", "Atlantean Kodex", "Heresiarch (Thousand-Faced Moon)"),
         ("https://www.youtube.com/watch?v=edPckSU41g4", "Cirith Ungol", "King of the Dead"),
         ("https://www.youtube.com/watch?v=EaBcKfc3cH8", "Crimson Glory", "Queen of the Masquerade"),
-        ("https://www.youtube.com/watch?v=gilVBNSRt6o", "Dokken", "In My Dreams"),
+        ("https://www.youtube.com/watch?v=m8fgPmINZ2Q", "Dokken", "In My Dreams"),
         ("https://www.youtube.com/watch?v=VmDgdDXH944", "Fates Warning", "Guardian"),
         ("https://www.youtube.com/watch?v=bGZ86q9Ox6k", "Fifth Angel", "In the Fallout"),
         ("https://www.youtube.com/watch?v=uEB48yMiQho", "Grim Reaper", "See You In Hell"),

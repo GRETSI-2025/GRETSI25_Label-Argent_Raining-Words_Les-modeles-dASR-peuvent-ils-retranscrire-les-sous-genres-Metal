@@ -240,9 +240,13 @@ def download_audio ( url:              str,
 
         # Get the file
         print(f"Downloading \"{target_file_path}\"", file=sys.stderr, flush=True)
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        os.chmod(target_file_path, 0o777)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            os.chmod(target_file_path, 0o777)
+        except Exception as e:
+            print(f"Error downloading \"{target_file_path}\". Please check that the link is still valid. Exception details:", file=sys.stderr, flush=True)
+            print(e, file=sys.stderr, flush=True)
 
 #####################################################################################################################################################
 

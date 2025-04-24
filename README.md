@@ -33,15 +33,21 @@ The first script (see below) will auomatically download a curated list of songs,
 
 ### Installation
 
-Installation is mostly straightforward, but requires some dependencies to be installed using the following command:
+Scripts have been tested with `Python 3.12.3`.
+
+To install the required packages, you can use `pip` to create a virtual environment and install the dependencies as follows:
 ```bash
 pip install -r requirements.txt
 ```
 
-The scripts will take care of downloading the models and datasets. Please make sure that you have a HuggingFace key for downloading models. If in a file, you can pass it to the script using the `--hf_key_path` parameter below.
+**Note:** Among the dependencies, `yt-dlp` is used to download the songs from YouTube. To work properly, it requires `ffmpeg` to be installed on your system. You can install it using `apt-get install ffmpeg` on Ubuntu or `brew install ffmpeg` on MacOS.
+
+**Note:** One of the models used, `Phi_4_Multimodal_Instruct`, supports flash attention. If your GPU supports it, you can install it following instructions [https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention](here). If not installed, the model will use the standard attention implementation.
+
+**Note**:** The scripts will take care of downloading the models and datasets. Please make sure that you have a HuggingFace key for downloading models. If in a file, you can pass it to the script using the `--hf_key_path` parameter below.
 
 <details>
-<summary>In case of version conflicts, click here for the output of `pip freeze` in a working fresh `venv`.</summary>
+<summary>**Note:** In case of version conflicts, click here for the output of `pip freeze` in a working fresh `venv`.</summary>
 
 ```bash
 absl-py==2.2.2
@@ -289,4 +295,4 @@ The present repository contains an `output` folder with the results of the paper
 - `--asr_models_songs`: List of models to evaluate on the songs and source-separated datasets (default: `["Whisper_Large_V3", "Whisper_Large_V2", "Phi_4_Multimodal_Instruct"]`)*. 
 - `--metrics`: List of metrics to compute (default: `["WER", "BLEU", "ROUGE", ("EmbeddingSimilarity", "Gte_Qwen2_1d5B_Instruct"), ("EmbeddingSimilarity", "All_MiniLM_L6_V2"), ("EmbeddingSimilarity", "All_MPNet_Base_V2")]`)*.
 
-**Note (*):** Values in those lists should be the name of the class in `lib/models/xxx.py` or a tuple `(model name, model arguments)` if needed.
+**Note: (*)** Values in those lists should be the name of the class in `lib/models/xxx.py` or a tuple `(model name, model arguments)` if needed.
