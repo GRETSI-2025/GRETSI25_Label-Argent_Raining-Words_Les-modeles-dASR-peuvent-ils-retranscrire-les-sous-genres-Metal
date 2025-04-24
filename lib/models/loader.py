@@ -82,4 +82,27 @@ def get_model ( model_class_name: Union[str, list[str], tuple[str]],
     return model
 
 #####################################################################################################################################################
+
+def free_model ( model_class_name: Union[str, list[str], tuple[str]]
+               ) ->                None:
+
+    """
+        Function to free a model from global memory.
+        In:
+            * model_class_name: The name of the model class, possibly with extra arguments.
+        Out:
+            * None.
+    """
+
+    # Model can be passed as a tuple with arguments
+    if type(model_class_name) in [list, tuple]:
+        model_class_name = model_class_name[0]
+    
+    # Free the model
+    memoization_key = str(model_class_name)
+    if "loaded_models" in globals() and memoization_key in globals()["loaded_models"]:
+        del globals()["loaded_models"][memoization_key]
+        print(f"Unloaded model \"{model_class_name}\"", file=sys.stderr, flush=True)
+
+#####################################################################################################################################################
 #####################################################################################################################################################

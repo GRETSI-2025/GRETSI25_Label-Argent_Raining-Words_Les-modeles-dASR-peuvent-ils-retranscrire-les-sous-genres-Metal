@@ -94,5 +94,8 @@ for asr_model in set(script_args().asr_models_emvd + script_args().asr_models_so
                 pandas.DataFrame(sheet).to_excel(writer, sheet_name=sheet_name, index=False)
         os.chmod(lyrics_file_path, 0o777)
     
+    # Free up memory
+    lib.models.loader.free_model(asr_model)
+
 #####################################################################################################################################################
 #####################################################################################################################################################

@@ -62,6 +62,7 @@ cffi==1.17.1
 charset-normalizer==3.4.1
 click==8.1.8
 cloudpickle==3.1.1
+colorama==0.4.6
 colorlog==6.9.0
 contourpy==1.3.2
 cycler==0.12.1
@@ -118,6 +119,7 @@ lightning-utilities==0.14.3
 lilcom==1.8.1
 llvmlite==0.44.0
 loguru==0.7.3
+lxml==5.4.0
 Mako==1.3.10
 Markdown==3.8
 markdown-it-py==3.0.0
@@ -167,6 +169,7 @@ plac==1.4.5
 platformdirs==4.3.7
 plotly==6.0.1
 pooch==1.8.2
+portalocker==3.1.1
 prompt_toolkit==3.0.51
 propcache==0.3.1
 protobuf==3.20.3
@@ -198,6 +201,7 @@ rich==14.0.0
 rouge==1.0.1
 ruamel.yaml==0.18.10
 ruamel.yaml.clib==0.2.12
+sacrebleu==2.5.1
 sacremoses==0.1.1
 safetensors==0.5.3
 scikit-learn==1.6.1
