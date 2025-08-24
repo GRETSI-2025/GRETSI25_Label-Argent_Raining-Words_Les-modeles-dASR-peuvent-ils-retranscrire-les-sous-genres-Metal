@@ -1,5 +1,15 @@
 # extreme_vocals_asr
 
+<hr>
+
+**_Dépôt labelisé dans le cadre du [Label Reproductible du GRESTI'25](https://gretsi.fr/colloque2025/recherche-reproductible/)_**
+
+| Label décerné | Auteur | Rapporteur | Éléments reproduits | Liens |
+|:-------------:|:------:|:----------:|:-------------------:|:------|
+| ![](label_argent.png) | Bastien PASDELOUP<br>[@BastienPasdeloup](https://github.com/BastienPasdeloup) | Félix RIEDEL<br>[@felix-riedel-UJM](https://github.com/felix-riedel-UJM) |  Tous les résultats | 📌&nbsp;[Dépôt&nbsp;original](https://github.com/BastienPasdeloup/extreme_vocals_asr)<br>⚙️&nbsp;[Issue](https://github.com/GRETSI-2025/Label-Reproductible/issues/15)<br>📝&nbsp;[Rapport](https://github.com/akrah/test/tree/main/rapports/Rapport_issue_15) |
+
+<hr>
+
 This script is used to evaluate the performance of ASR models on a dataset of metal songs.
 
 ### Contacts
